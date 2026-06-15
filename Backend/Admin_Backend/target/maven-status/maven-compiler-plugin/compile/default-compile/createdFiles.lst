@@ -1,0 +1,15 @@
+com\clms\backend\controller\RoleController.class
+com\clms\backend\config\CorsConfig$1.class
+com\clms\backend\controller\UserController.class
+com\clms\backend\model\LearningPath.class
+com\clms\backend\controller\CourseController.class
+com\clms\backend\repository\CourseRepository.class
+com\clms\backend\repository\RoleRepository.class
+com\clms\backend\config\CorsConfig.class
+com\clms\backend\model\Course.class
+com\clms\backend\model\User.class
+com\clms\backend\repository\LearningPathRepository.class
+com\clms\backend\model\Role.class
+com\clms\backend\repository\UserRepository.class
+com\clms\backend\BackendApplication.class
+com\clms\backend\controller\LearningPathController.class

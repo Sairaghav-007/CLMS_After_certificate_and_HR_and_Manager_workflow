@@ -1,0 +1,14 @@
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\BackendApplication.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\controller\RoleController.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\model\User.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\controller\UserController.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\model\Role.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\config\CorsConfig.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\controller\CourseController.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\repository\UserRepository.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\model\Course.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\repository\RoleRepository.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\model\LearningPath.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\repository\LearningPathRepository.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\repository\CourseRepository.java
+D:\clms-virtusa\backend\src\main\java\com\clms\backend\controller\LearningPathController.java
