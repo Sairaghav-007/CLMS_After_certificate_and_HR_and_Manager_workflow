@@ -1,0 +1,53 @@
+package com.example.clms.course;
+
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.LocalDate;
+import java.util.List;
+
+@Entity
+@Table(name = "courses")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Course {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String title;
+
+    private String category;
+
+    @Column(length = 4096)
+    private String description;
+
+    private LocalDate dueDate;
+
+    @Builder.Default
+    private boolean active = true;
+
+    @Builder.Default
+    private String status = "Published"; // Default to Published for existing seed data, HR creates as Draft/Submitted
+
+    private String createdBy;
+    
+    @Builder.Default
+    private int passingScore = 70;
+    
+    @Builder.Default
+    private int maxAttempts = 3;
+    
+    @Builder.Default
+    private int duration = 10; // in hours
+    
+    private String thumbnail;
+    private String department;
+
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("moduleOrder ASC")
+    private List<CourseModule> modules;
+}

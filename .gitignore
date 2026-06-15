@@ -1,0 +1,38 @@
+# Root-level gitignore
+
+# Environment variables — secrets must never be committed
+.env
+.env.*
+!.env.example
+
+# Build outputs
+**/target/
+**/dist/
+**/.mvn/wrapper/maven-wrapper.jar
+
+# Node modules
+**/node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp / scratch
+temp_query/
+backend_run.log
+backend_err.log
+frontend_run.log
+frontend_err.log
+uploads/
+*.log
+
+# Mock test files
+mock_doc.pdf
+mock_video.mp4
+mock_presentation.ppt

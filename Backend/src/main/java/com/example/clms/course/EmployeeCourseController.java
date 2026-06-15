@@ -1,0 +1,396 @@
+package com.example.clms.course;
+
+import com.example.clms.user.User;
+import com.example.clms.user.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+@RestController
+@RequestMapping("/api/employee")
+@RequiredArgsConstructor
+public class EmployeeCourseController {
+
+    private final CourseRepository courseRepository;
+    private final UserRepository userRepository;
+    private final CourseProgressRepository courseProgressRepository;
+    private final CourseSectionProgressRepository courseSectionProgressRepository;
+    private final CertificateRepository certificateRepository;
+    private final QuestionRepository questionRepository;
+
+    private User getAuthenticatedUser() {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Logged in user not found: " + email));
+    }
+
+    @GetMapping("/courses")
+    @Transactional(readOnly = true)
+    public List<CourseSummaryResponse> getCourses(@RequestParam(required = false) String search) {
+        User employee = getAuthenticatedUser();
+        List<Course> courses = search != null && !search.isBlank()
+                ? courseRepository.findByActiveTrueAndTitleContainingIgnoreCase(search)
+                : courseRepository.findByActiveTrue();
+
+        return courses.stream()
+                .filter(course -> "Published".equalsIgnoreCase(course.getStatus()) || "Ready to Publish".equalsIgnoreCase(course.getStatus()))
+                .map(course -> {
+                    CourseProgress progress = courseProgressRepository.findByEmployeeIdAndCourseId(employee.getId(), course.getId())
+                            .orElse(null);
+                    int progressPercent = progress != null ? progress.getProgressPercentage() : 0;
+                    String status = progress != null ? (progress.isCompleted() ? "COMPLETED" : progressPercent > 0 ? "IN_PROGRESS" : "NOT_STARTED") : "NOT_STARTED";
+                    
+                    return new CourseSummaryResponse(
+                            course.getId(),
+                            course.getTitle(),
+                            course.getCategory(),
+                            course.getDescription(),
+                            course.getDueDate(),
+                            progressPercent,
+                            status
+                    );
+                })
+                .toList();
+    }
+
+    @GetMapping("/courses/{id}")
+    @Transactional(readOnly = true)
+    public CourseDetailResponse getCourse(@PathVariable Long id) {
+        User employee = getAuthenticatedUser();
+        Course course = courseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        CourseProgress courseProgress = courseProgressRepository.findByEmployeeIdAndCourseId(employee.getId(), id)
+                .orElse(null);
+
+        int progressPercent = courseProgress != null ? courseProgress.getProgressPercentage() : 0;
+        String status = courseProgress != null ? (courseProgress.isCompleted() ? "COMPLETED" : progressPercent > 0 ? "IN_PROGRESS" : "NOT_STARTED") : "NOT_STARTED";
+
+        // Map Certificate if exists
+        Certificate cert = certificateRepository.findByEmployeeIdAndCourseId(employee.getId(), id)
+                .orElse(null);
+        CourseDetailResponse.CertificateResponse certResponse = null;
+        if (cert != null) {
+            certResponse = new CourseDetailResponse.CertificateResponse(
+                    cert.getId(),
+                    cert.getCertificateNumber(),
+                    cert.getQrCodeData(),
+                    cert.getVerificationUrl(),
+                    cert.getIssuedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                    employee.getFullName(),
+                    course.getTitle()
+            );
+        }
+
+        // Map Questions for Assessment
+        List<Question> questions = questionRepository.findByCourseId(id);
+        List<CourseDetailResponse.QuestionResponse> questionResponses = questions.stream()
+                .map(q -> {
+                    List<CourseDetailResponse.OptionResponse> options = new ArrayList<>();
+                    if (q.getOptionA() != null && !q.getOptionA().isBlank()) options.add(new CourseDetailResponse.OptionResponse("A", q.getOptionA()));
+                    if (q.getOptionB() != null && !q.getOptionB().isBlank()) options.add(new CourseDetailResponse.OptionResponse("B", q.getOptionB()));
+                    if (q.getOptionC() != null && !q.getOptionC().isBlank()) options.add(new CourseDetailResponse.OptionResponse("C", q.getOptionC()));
+                    if (q.getOptionD() != null && !q.getOptionD().isBlank()) options.add(new CourseDetailResponse.OptionResponse("D", q.getOptionD()));
+
+                    return new CourseDetailResponse.QuestionResponse(
+                            String.valueOf(q.getId()),
+                            options.size() == 2 ? "true_false" : "mcq",
+                            q.getQuestion(),
+                            options,
+                            List.of(q.getCorrectAnswer()),
+                            5
+                    );
+                })
+                .toList();
+
+        // Calculate if modules are locked
+        List<CourseSectionProgress> sectionProgresses = courseSectionProgressRepository.findByEmployeeIdAndCourseId(employee.getId(), id);
+        
+        List<CourseDetailResponse.ModuleResponse> moduleResponses = new ArrayList<>();
+        boolean previousModuleCompleted = true; // First module is always unlocked
+
+        List<CourseModule> sortedModules = new ArrayList<>(course.getModules());
+        sortedModules.sort(Comparator.comparing(CourseModule::getModuleOrder, Comparator.nullsLast(Integer::compareTo)));
+
+        for (int i = 0; i < sortedModules.size(); i++) {
+            CourseModule module = sortedModules.get(i);
+            
+            List<CourseSection> sortedSections = new ArrayList<>(module.getSections());
+            sortedSections.sort(Comparator.comparing(CourseSection::getSectionOrder, Comparator.nullsLast(Integer::compareTo)));
+
+            List<CourseDetailResponse.SectionResponse> sectionResponses = new ArrayList<>();
+            int completedSectionsCount = 0;
+            
+            for (CourseSection section : sortedSections) {
+                CourseSectionProgress secProg = sectionProgresses.stream()
+                        .filter(sp -> sp.getSectionId().equals(section.getId()))
+                        .findFirst()
+                        .orElse(null);
+
+                int secProgress = secProg != null ? secProg.getProgress() : 0;
+                boolean secCompleted = secProg != null && secProg.isCompleted();
+                if (secCompleted) {
+                    completedSectionsCount++;
+                }
+
+                sectionResponses.add(new CourseDetailResponse.SectionResponse(
+                        section.getId(),
+                        section.getTitle(),
+                        section.getMaterialType(),
+                        section.getMaterialUrl(),
+                        section.getSectionOrder(),
+                        secProgress,
+                        secCompleted
+                ));
+            }
+
+            int moduleCompletionPercent = sortedSections.isEmpty() ? 100 : (completedSectionsCount * 100) / sortedSections.size();
+            boolean isModuleCompleted = moduleCompletionPercent == 100;
+            boolean isLocked = i > 0 && !previousModuleCompleted;
+
+            moduleResponses.add(new CourseDetailResponse.ModuleResponse(
+                    module.getId(),
+                    module.getTitle(),
+                    module.getModuleOrder(),
+                    moduleCompletionPercent,
+                    isModuleCompleted,
+                    isLocked,
+                    sectionResponses
+            ));
+
+            previousModuleCompleted = isModuleCompleted;
+        }
+
+        // Assessment status
+        boolean allModulesCompleted = moduleResponses.stream().allMatch(CourseDetailResponse.ModuleResponse::isCompleted);
+        CourseDetailResponse.AssessmentResponse assessmentResponse = new CourseDetailResponse.AssessmentResponse(
+                "AST-" + course.getId(),
+                course.getTitle() + " Final Quiz",
+                15,
+                80,
+                course.getMaxAttempts(),
+                courseProgress != null ? courseProgress.getAttemptsUsed() : 0,
+                !allModulesCompleted,
+                courseProgress != null && courseProgress.isPassed(),
+                courseProgress != null ? courseProgress.getLastScore() : null,
+                questionResponses
+        );
+
+        return new CourseDetailResponse(
+                course.getId(),
+                course.getTitle(),
+                course.getCategory(),
+                course.getDescription(),
+                course.getDueDate(),
+                progressPercent,
+                status,
+                certResponse,
+                assessmentResponse,
+                moduleResponses
+        );
+    }
+
+    public static class ProgressUpdateRequest {
+        public Long moduleId;
+        public Long sectionId;
+        public int progress;
+    }
+
+    @PostMapping("/courses/{courseId}/progress")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> updateProgress(
+            @PathVariable Long courseId,
+            @RequestBody ProgressUpdateRequest req
+    ) {
+        User employee = getAuthenticatedUser();
+
+        // Save section progress
+        CourseSectionProgress secProg = courseSectionProgressRepository
+                .findByEmployeeIdAndCourseIdAndSectionId(employee.getId(), courseId, req.sectionId)
+                .orElse(null);
+
+        if (secProg == null) {
+            secProg = CourseSectionProgress.builder()
+                    .employeeId(employee.getId())
+                    .courseId(courseId)
+                    .sectionId(req.sectionId)
+                    .progress(req.progress)
+                    .completed(req.progress >= 100)
+                    .lastAccessed(LocalDateTime.now())
+                    .build();
+        } else {
+            secProg.setProgress(Math.max(secProg.getProgress(), req.progress));
+            if (req.progress >= 100) {
+                secProg.setCompleted(true);
+            }
+            secProg.setLastAccessed(LocalDateTime.now());
+        }
+        courseSectionProgressRepository.save(secProg);
+
+        // Fetch course structure
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        // Compute total sections and total completed sections
+        int totalSections = 0;
+        int completedSections = 0;
+
+        List<CourseSectionProgress> allSecProgress = courseSectionProgressRepository
+                .findByEmployeeIdAndCourseId(employee.getId(), courseId);
+
+        for (CourseModule m : course.getModules()) {
+            for (CourseSection s : m.getSections()) {
+                totalSections++;
+                boolean isCompleted = allSecProgress.stream()
+                        .anyMatch(sp -> sp.getSectionId().equals(s.getId()) && sp.isCompleted());
+                if (isCompleted) {
+                    completedSections++;
+                }
+            }
+        }
+
+        int overallProgressPercent = totalSections == 0 ? 100 : (completedSections * 100) / totalSections;
+
+        // Update course progress
+        CourseProgress progress = courseProgressRepository.findByEmployeeIdAndCourseId(employee.getId(), courseId)
+                .orElse(null);
+
+        if (progress == null) {
+            progress = CourseProgress.builder()
+                    .employeeId(employee.getId())
+                    .courseId(courseId)
+                    .progressPercentage(overallProgressPercent)
+                    .completed(overallProgressPercent >= 100)
+                    .lastAccessed(LocalDateTime.now())
+                    .build();
+        } else {
+            progress.setProgressPercentage(Math.max(progress.getProgressPercentage(), overallProgressPercent));
+            if (overallProgressPercent >= 100) {
+                progress.setCompleted(true);
+                if (progress.getCompletedAt() == null) {
+                    progress.setCompletedAt(LocalDateTime.now());
+                }
+            }
+            progress.setLastAccessed(LocalDateTime.now());
+        }
+        courseProgressRepository.save(progress);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("progress", progress.getProgressPercentage());
+        response.put("status", progress.isCompleted() ? "COMPLETED" : "IN_PROGRESS");
+        return ResponseEntity.ok(response);
+    }
+
+    public static class AssessmentSubmitRequest {
+        public int score;
+        public String employeeName;
+    }
+
+    @PostMapping("/courses/{courseId}/assessment")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> submitAssessment(
+            @PathVariable Long courseId,
+            @RequestBody AssessmentSubmitRequest req
+    ) {
+        User employee = getAuthenticatedUser();
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        CourseProgress progress = courseProgressRepository.findByEmployeeIdAndCourseId(employee.getId(), courseId)
+                .orElse(null);
+
+        if (progress == null) {
+            progress = CourseProgress.builder()
+                    .employeeId(employee.getId())
+                    .courseId(courseId)
+                    .progressPercentage(100) // Assumed completed if doing assessment
+                    .completed(true)
+                    .completedAt(LocalDateTime.now())
+                    .lastAccessed(LocalDateTime.now())
+                    .build();
+        }
+
+        progress.setAttemptsUsed(progress.getAttemptsUsed() + 1);
+        progress.setLastScore(req.score);
+
+        boolean isPassed = req.score >= course.getPassingScore();
+        if (isPassed) {
+            progress.setPassed(true);
+        }
+        courseProgressRepository.save(progress);
+
+        // Generate certificate
+        CertificateResponseDto certResponse = null;
+        if (isPassed) {
+            Certificate cert = certificateRepository.findByEmployeeIdAndCourseId(employee.getId(), courseId)
+                    .orElse(null);
+
+            if (cert == null) {
+                cert = Certificate.builder()
+                        .employeeId(employee.getId())
+                        .courseId(courseId)
+                        .issuedAt(LocalDateTime.now())
+                        .certificateNumber("CERT-" + courseId + "-" + (100000 + new Random().nextInt(900000)))
+                        .qrCodeData("https://verify.acmecorp.com/certificates/" + courseId)
+                        .verificationUrl("https://verify.acmecorp.com/certificates/" + courseId)
+                        .build();
+                certificateRepository.save(cert);
+            }
+
+            certResponse = new CertificateResponseDto(
+                    cert.getId(),
+                    cert.getCertificateNumber(),
+                    cert.getQrCodeData(),
+                    cert.getVerificationUrl(),
+                    cert.getIssuedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                    employee.getFullName(),
+                    course.getTitle()
+            );
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("score", req.score);
+        response.put("isPassed", isPassed);
+        response.put("attemptsUsed", progress.getAttemptsUsed());
+        response.put("certificate", certResponse);
+        return ResponseEntity.ok(response);
+    }
+
+    public record CertificateResponseDto(
+            Long id,
+            String certificateNumber,
+            String qrCodeData,
+            String verificationUrl,
+            String issuedAt,
+            String employeeName,
+            String courseName
+    ) {}
+
+    @GetMapping("/certificates")
+    @Transactional(readOnly = true)
+    public List<CertificateResponseDto> getCertificates() {
+        User employee = getAuthenticatedUser();
+        List<Certificate> certs = certificateRepository.findByEmployeeId(employee.getId());
+        
+        return certs.stream()
+                .map(cert -> {
+                    Course course = courseRepository.findById(cert.getCourseId()).orElse(null);
+                    String courseTitle = course != null ? course.getTitle() : "Competency Training";
+                    return new CertificateResponseDto(
+                            cert.getId(),
+                            cert.getCertificateNumber(),
+                            cert.getQrCodeData(),
+                            cert.getVerificationUrl(),
+                            cert.getIssuedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                            employee.getFullName(),
+                            courseTitle
+                    );
+                })
+                .toList();
+    }
+}
