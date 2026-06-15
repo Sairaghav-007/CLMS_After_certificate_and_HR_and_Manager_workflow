@@ -75,25 +75,34 @@ public class ManagerController {
                 .collect(Collectors.toList());
 
         List<CourseEnrollment> enrollments = courseEnrollmentRepository.findAll();
-        
+        List<Certificate> allCerts = certificateRepository.findAll();
+
         long totalMembers = employees.size();
         long completed = enrollments.stream().filter(e -> "Completed".equalsIgnoreCase(e.getStatus())).count();
         long inProgress = enrollments.stream().filter(e -> "In Progress".equalsIgnoreCase(e.getStatus())).count();
         long overdue = enrollments.stream().filter(e -> "Non-Compliant".equalsIgnoreCase(e.getStatus())).count();
-        
-        double completionRate = totalMembers > 0 ? ((double) completed / (totalMembers * 3)) * 100 : 0.0; // Assume 3 courses assigned per person avg
-        if (completionRate > 100) completionRate = 85.0; // fallback standard visual
-        if (completionRate == 0) completionRate = 72.5;
+
+        // Compute real average quiz score from course_progress
+        List<CourseProgress> allProgress = courseProgressRepository.findAll();
+        double avgScore = allProgress.stream()
+                .filter(p -> p.getLastScore() != null && p.getLastScore() > 0)
+                .mapToInt(CourseProgress::getLastScore)
+                .average()
+                .orElse(0.0);
+
+        long completionRate = totalMembers > 0
+                ? Math.round(((double) completed / Math.max(totalMembers, 1)) * 100)
+                : 0;
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalTeamMembers", totalMembers);
-        stats.put("assignedCourses", totalMembers * 3);
-        stats.put("completedCourses", completed > 0 ? completed : 24);
-        stats.put("inProgressCourses", inProgress > 0 ? inProgress : 8);
-        stats.put("overdueEmployees", overdue > 0 ? overdue : 2);
-        stats.put("teamCompletionRate", Math.round(completionRate));
-        stats.put("averageQuizScore", 84);
-        stats.put("certificatesEarned", completed > 0 ? completed : 15);
+        stats.put("assignedCourses", totalMembers > 0 ? totalMembers * 3 : 0);
+        stats.put("completedCourses", completed);
+        stats.put("inProgressCourses", inProgress);
+        stats.put("overdueEmployees", overdue);
+        stats.put("teamCompletionRate", completionRate);
+        stats.put("averageQuizScore", Math.round(avgScore));
+        stats.put("certificatesEarned", allCerts.size());
 
         return ResponseEntity.ok(stats);
     }
@@ -167,8 +176,22 @@ public class ManagerController {
     // List Courses Awaiting Review
     @GetMapping("/reviews")
     public ResponseEntity<List<Map<String, Object>>> getReviews() {
+        // Fetch all courses in review pipeline; deduplicate by ID
         List<Course> courses = courseRepository.findAll().stream()
-                .filter(c -> "Submitted For Review".equalsIgnoreCase(c.getStatus()) || "PENDING_MANAGER_REVIEW".equalsIgnoreCase(c.getStatus()) || "On Review".equalsIgnoreCase(c.getStatus()) || "Need Changes".equalsIgnoreCase(c.getStatus()))
+                .filter(c -> {
+                    String s = c.getStatus();
+                    return "PENDING_MANAGER_REVIEW".equalsIgnoreCase(s)
+                            || "ON_REVIEW".equalsIgnoreCase(s)
+                            || "REJECTED".equalsIgnoreCase(s);
+                })
+                .collect(Collectors.toMap(
+                        Course::getId,
+                        c -> c,
+                        (a, b) -> a,      // keep first on duplicate
+                        java.util.LinkedHashMap::new
+                ))
+                .values()
+                .stream()
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> list = new ArrayList<>();
@@ -179,14 +202,25 @@ public class ManagerController {
             item.put("courseName", c.getTitle());
             item.put("authorName", c.getCreatedBy() != null ? c.getCreatedBy() : "HR Specialist");
             item.put("status", c.getStatus());
-            item.put("modules", c.getModules() != null ? c.getModules().size() : 2);
-            item.put("sessions", 5);
-            item.put("videos", 3);
-            item.put("pdfs", 1);
-            item.put("ppts", 1);
+            item.put("modules", c.getModules() != null ? c.getModules().size() : 0);
+            int totalSessions = c.getModules() != null ? c.getModules().stream()
+                    .mapToInt(m -> m.getSections() != null ? m.getSections().size() : 0).sum() : 0;
+            int videos = c.getModules() != null ? c.getModules().stream()
+                    .flatMap(m -> m.getSections() != null ? m.getSections().stream() : java.util.stream.Stream.empty())
+                    .mapToInt(s -> s.getMaterialType() == MaterialType.VIDEO ? 1 : 0).sum() : 0;
+            int pdfs = c.getModules() != null ? c.getModules().stream()
+                    .flatMap(m -> m.getSections() != null ? m.getSections().stream() : java.util.stream.Stream.empty())
+                    .mapToInt(s -> s.getMaterialType() == MaterialType.PDF ? 1 : 0).sum() : 0;
+            int ppts = c.getModules() != null ? c.getModules().stream()
+                    .flatMap(m -> m.getSections() != null ? m.getSections().stream() : java.util.stream.Stream.empty())
+                    .mapToInt(s -> s.getMaterialType() == MaterialType.PPT ? 1 : 0).sum() : 0;
+            item.put("sessions", totalSessions);
+            item.put("videos", videos);
+            item.put("pdfs", pdfs);
+            item.put("ppts", ppts);
             item.put("passingScore", c.getPassingScore());
-            item.put("submittedDate", "2026-06-12");
-            item.put("metadata", true);
+            item.put("submittedDate", c.getDueDate() != null ? c.getDueDate().minusDays(30).toString() : "2026-06-12");
+            item.put("metadata", c.getTitle() != null && !c.getTitle().isBlank());
             list.add(item);
         }
 
@@ -199,10 +233,10 @@ public class ManagerController {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
 
-        String nextStatus = ("Submitted For Review".equalsIgnoreCase(course.getStatus()) || "PENDING_MANAGER_REVIEW".equalsIgnoreCase(course.getStatus())) ? "On Review" : "Ready To Publish";
+        String nextStatus = "PENDING_MANAGER_REVIEW".equalsIgnoreCase(course.getStatus()) ? "ON_REVIEW" : "READY_TO_PUBLISH";
         course.setStatus(nextStatus);
         
-        if ("Ready To Publish".equals(nextStatus)) {
+        if ("READY_TO_PUBLISH".equals(nextStatus)) {
             course.setActive(true);
         }
 
@@ -266,7 +300,7 @@ public class ManagerController {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
 
-        course.setStatus("Need Changes");
+        course.setStatus("REJECTED");
         courseRepository.save(course);
 
         // Create Change Request
@@ -285,7 +319,7 @@ public class ManagerController {
                 .courseId(courseId)
                 .username("Sarah Mitchell")
                 .action("Changes Requested")
-                .status("Need Changes")
+                .status("REJECTED")
                 .comment(request.comments)
                 .timestamp(LocalDateTime.now())
                 .build();
@@ -315,7 +349,7 @@ public class ManagerController {
         Map<String, Object> payload = new HashMap<>();
         payload.put("courseId", courseId);
         payload.put("courseName", course.getTitle());
-        payload.put("status", "Need Changes");
+        payload.put("status", "REJECTED");
         payload.put("action", "REJECTED");
         sseService.broadcast("course_review", payload);
 

@@ -283,6 +283,18 @@ export function AdminPage() {
     addToast({ type: 'error', title: 'Action Disabled', message: 'Course creation is now restricted to HR portal.' });
   };
 
+  const handleDeleteCourse = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete course "${name}"? This will also delete all progress, questions, and certificates for this course.`)) {
+      try {
+        await courseApi.remove(id);
+        addToast({ type: 'success', title: 'Course Deleted', message: `Course "${name}" was deleted.` });
+        fetchCourses();
+      } catch {
+        addToast({ type: 'error', title: 'Delete Failed', message: 'Could not delete course. Please try again.' });
+      }
+    }
+  };
+
   // Filter lists
   const filteredAccounts = accounts.filter(a => {
     const fullName = `${a.firstName || ''} ${a.middleName || ''} ${a.lastName || ''}`.toLowerCase();
@@ -320,6 +332,7 @@ export function AdminPage() {
             { id: 'overview', label: 'Overview', icon: LayoutDashboard },
             { id: 'accounts', label: 'Accounts Manager', icon: Users },
             { id: 'paths', label: 'Learning Paths', icon: FolderKanban },
+            { id: 'courses', label: 'Courses Database', icon: BookOpen },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -729,7 +742,16 @@ export function AdminPage() {
                     )}>
                       {course.category}
                     </span>
-                    <span className="text-[10px] font-bold text-surface-400">ID: {course.id}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-surface-400">ID: {course.id}</span>
+                      <button 
+                        onClick={() => handleDeleteCourse(course.id, course.title)}
+                        className="p-1 rounded hover:bg-rose-50 text-surface-400 hover:text-rose-600 transition-all cursor-pointer"
+                        title="Delete Course"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
                   <h4 className="font-bold text-surface-900 leading-snug line-clamp-2">{course.title}</h4>
                 </div>

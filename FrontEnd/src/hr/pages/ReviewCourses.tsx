@@ -19,14 +19,13 @@ import type { CourseStatus } from '@/hr/types/course';
 const TABS = [
   { id: 'All', label: 'All queue' },
   { id: 'Review', label: 'Waiting for Manager' },
-  { id: 'Ready To Publish', label: 'Approved' },
-  { id: 'Scheduled', label: 'Scheduled' },
+  { id: 'READY_TO_PUBLISH', label: 'Approved' },
 ];
 
 const REVIEW_STATUSES: CourseStatus[] = [
-  'Submitted For Review',
-  'On Review',
-  'Need Changes',
+  'PENDING_MANAGER_REVIEW',
+  'ON_REVIEW',
+  'REJECTED',
 ];
 
 export default function ReviewCourses() {
@@ -39,11 +38,18 @@ export default function ReviewCourses() {
 
   useEffect(() => {
     fetchCourses();
+
+    // SSE — real-time refresh when manager approves/rejects or HR submits
+    const es = new EventSource('http://localhost:8080/api/hr/events');
+    es.addEventListener('course_update', () => { fetchCourses(); });
+    es.addEventListener('course_review', () => { fetchCourses(); });
+    es.onerror = () => {}; // silent — non-blocking
+    return () => es.close();
   }, [fetchCourses]);
 
   const filteredCourses = useMemo(() => {
     return courses.filter((c) => {
-      const inScope = [...REVIEW_STATUSES, 'Ready To Publish', 'Scheduled'].includes(c.status);
+      const inScope = [...REVIEW_STATUSES, 'READY_TO_PUBLISH'].includes(c.status);
       if (!inScope) return false;
 
       let matchesTab = true;
@@ -57,10 +63,9 @@ export default function ReviewCourses() {
 
   const stats = useMemo(() => {
     const map: Record<string, number> = {};
-    map['All'] = courses.filter(c => [...REVIEW_STATUSES, 'Ready To Publish', 'Scheduled'].includes(c.status)).length;
+    map['All'] = courses.filter(c => [...REVIEW_STATUSES, 'READY_TO_PUBLISH'].includes(c.status)).length;
     map['Review'] = courses.filter(c => REVIEW_STATUSES.includes(c.status)).length;
-    map['Ready To Publish'] = courses.filter(c => c.status === 'Ready To Publish').length;
-    map['Scheduled'] = courses.filter(c => c.status === 'Scheduled').length;
+    map['READY_TO_PUBLISH'] = courses.filter(c => c.status === 'READY_TO_PUBLISH').length;
     return map;
   }, [courses]);
 
@@ -121,24 +126,27 @@ export default function ReviewCourses() {
                    </div>
                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                         <span className={cn("px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border", 
-                            course.status === 'Ready To Publish' ? "bg-green-500/10 text-green-500 border-green-500/20" : 
-                            course.status === 'Need Changes' ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                            "bg-primary-500/10 text-primary-500 border-primary-500/20"
-                         )}>
-                            {course.status === 'Ready To Publish' ? 'Approved' : course.status === 'Submitted For Review' ? 'Awaiting Manager' : course.status}
-                         </span>
-                      </div>
-                      <h3 className="font-bold text-base truncate pr-6 group-hover:text-primary-500 transition-colors">{course.title}</h3>
-                   </div>
-                </div>
+                          <span className={cn("px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border", 
+                             course.status === 'READY_TO_PUBLISH' ? "bg-green-500/10 text-green-500 border-green-500/20" : 
+                             course.status === 'REJECTED' ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                             "bg-primary-500/10 text-primary-500 border-primary-500/20"
+                          )}>
+                              {course.status === 'READY_TO_PUBLISH' ? 'Approved' 
+                               : course.status === 'PENDING_MANAGER_REVIEW' ? 'Awaiting Manager' 
+                               : course.status === 'REJECTED' ? 'Need Changes'
+                               : course.status}
+                          </span>
+                       </div>
+                       <h3 className="font-bold text-base truncate pr-6 group-hover:text-primary-500 transition-colors">{course.title}</h3>
+                    </div>
+                 </div>
 
-                {course.status === 'Need Changes' && course.changeRequests.length > 0 && (
-                  <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/10 mb-6 flex items-start gap-2">
-                     <AlertCircle className="w-3.5 h-3.5 text-red-500 mt-0.5" />
-                     <p className="text-[11px] text-red-600 line-clamp-2 leading-relaxed italic">{course.changeRequests[course.changeRequests.length-1].feedback}</p>
-                  </div>
-                )}
+                 {course.status === 'REJECTED' && course.changeRequests.length > 0 && (
+                   <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/10 mb-6 flex items-start gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 text-red-500 mt-0.5" />
+                      <p className="text-[11px] text-red-600 line-clamp-2 leading-relaxed italic">{course.changeRequests[course.changeRequests.length-1].feedback}</p>
+                   </div>
+                 )}
 
                 <div className="flex items-center justify-between pt-4 border-t border-surface-100 dark:border-surface-800">
                    <div className="flex items-center gap-2 text-surface-400">

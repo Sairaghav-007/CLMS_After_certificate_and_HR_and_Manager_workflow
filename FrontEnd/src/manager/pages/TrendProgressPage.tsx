@@ -98,7 +98,7 @@ export default function TrendProgressPage() {
         >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-sm font-bold text-surface-900 dark:text-black">Learning Engagement Trend</h3>
+              <h3 className="text-sm font-bold text-surface-900 dark:text-white">Learning Engagement Trend</h3>
               <p className="text-[10px] text-surface-500">Correlation between hours and completions</p>
             </div>
             <Maximize2 className="w-4 h-4 text-surface-400 cursor-pointer" />
@@ -126,7 +126,7 @@ export default function TrendProgressPage() {
         >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-sm font-bold text-surface-900 dark:text-black">Score & Compliance Outlook</h3>
+              <h3 className="text-sm font-bold text-surface-900 dark:text-white">Score & Compliance Outlook</h3>
               <p className="text-[10px] text-surface-500">Quality metrics over 12-week period</p>
             </div>
             <Share2 className="w-4 h-4 text-surface-400 cursor-pointer" />
@@ -174,7 +174,7 @@ export default function TrendProgressPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] text-surface-500 font-bold uppercase tracking-widest">{item.title}</p>
-              <h4 className="text-sm font-bold text-surface-900 dark:text-black truncate">{item.value}</h4>
+              <h4 className="text-sm font-bold text-surface-900 dark:text-white truncate">{item.value}</h4>
               <p className="text-[10px] text-accent-500 font-bold flex items-center gap-0.5 mt-0.5">
                 <ArrowUpRight className="w-3 h-3" /> +{item.trend}% growth
               </p>

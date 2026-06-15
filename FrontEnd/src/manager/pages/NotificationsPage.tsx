@@ -43,7 +43,7 @@ export default function NotificationsPage() {
           <div className="flex gap-2">
              <button
               onClick={markAllRead}
-              className="px-4 py-2 rounded-xl bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-black text-xs font-bold hover:bg-surface-200 transition-all flex items-center gap-2"
+               className="px-4 py-2 rounded-xl bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-white text-xs font-bold hover:bg-surface-200 transition-all flex items-center gap-2"
             >
               <Check className="w-3.5 h-3.5" /> Mark All as Read
             </button>
@@ -108,7 +108,7 @@ export default function NotificationsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <h4 className={`text-xs font-bold truncate ${n.read ? 'text-surface-700 dark:text-black' : 'text-surface-900 dark:text-black'}`}>
+                    <h4 className={`text-xs font-bold truncate ${n.read ? 'text-surface-700 dark:text-surface-300' : 'text-surface-900 dark:text-white'}`}>
                       {n.title}
                     </h4>
                     {!n.read && (
@@ -117,7 +117,7 @@ export default function NotificationsPage() {
                   </div>
                   <span className="text-[10px] text-surface-400 font-medium">{new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                <p className="text-[11px] text-surface-500 dark:text-black leading-relaxed max-w-2xl">{n.message}</p>
+                <p className="text-[11px] text-surface-500 dark:text-surface-300 leading-relaxed max-w-2xl">{n.message}</p>
                 {n.actionUrl && (
                   <button 
                     onClick={(e) => {
@@ -145,7 +145,7 @@ export default function NotificationsPage() {
              <div className="w-16 h-16 rounded-2xl bg-surface-100 dark:bg-surface-800 flex items-center justify-center mx-auto mb-4">
                 <Bell className="w-8 h-8 text-surface-300" />
              </div>
-             <h3 className="text-base font-bold text-surface-900 dark:text-black">All caught up</h3>
+             <h3 className="text-base font-bold text-surface-900 dark:text-white">All caught up</h3>
              <p className="text-sm text-surface-500">No notifications found matches your criteria.</p>
           </div>
         )}

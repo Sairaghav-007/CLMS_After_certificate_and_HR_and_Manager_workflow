@@ -71,7 +71,7 @@ export default function CourseCompliancePage() {
             <ShieldCheck className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-surface-900 dark:text-black">{stats.compliance}%</p>
+            <p className="text-2xl font-bold text-surface-900 dark:text-white">{stats.compliance}%</p>
             <p className="text-xs font-medium text-surface-500 uppercase tracking-wider">Compliance Rate</p>
             <div className="w-32 mt-2">
               <ProgressBar value={stats.compliance} color="bg-accent-500" showLabel={false} />
@@ -84,7 +84,7 @@ export default function CourseCompliancePage() {
             <AlertTriangle className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-surface-900 dark:text-black">{stats.pending}%</p>
+            <p className="text-2xl font-bold text-surface-900 dark:text-white">{stats.pending}%</p>
             <p className="text-xs font-medium text-surface-500 uppercase tracking-wider">Total Pending</p>
             <div className="w-32 mt-2">
               <ProgressBar value={stats.pending} color="bg-danger-500" showLabel={false} />
@@ -97,7 +97,7 @@ export default function CourseCompliancePage() {
             <CheckCircle2 className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-surface-900 dark:text-black">{stats.avgScore}%</p>
+            <p className="text-2xl font-bold text-surface-900 dark:text-white">{stats.avgScore}%</p>
             <p className="text-xs font-medium text-surface-500 uppercase tracking-wider">Avg Passing Score</p>
             <p className="text-[10px] text-accent-600 font-bold mt-1">+2.4% from last month</p>
           </div>
@@ -120,7 +120,7 @@ export default function CourseCompliancePage() {
           />
           <div className="flex items-center gap-2">
             <span className="text-xs text-surface-500 font-medium">Records Found:</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-surface-100 dark:bg-surface-800 text-xs font-bold text-surface-900 dark:text-black">
+            <span className="px-2.5 py-0.5 rounded-full bg-surface-100 dark:bg-surface-800 text-xs font-bold text-surface-900 dark:text-white">
               {filteredRecords.length}
             </span>
           </div>
@@ -151,13 +151,13 @@ export default function CourseCompliancePage() {
                         <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-[10px] font-bold text-white uppercase">
                           {rec.employeeName.substring(0, 2)}
                         </div>
-                        <p className="text-xs font-semibold text-surface-900 dark:text-black">{rec.employeeName}</p>
+                        <p className="text-xs font-semibold text-surface-900 dark:text-white">{rec.employeeName}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-xs text-surface-600 dark:text-black">{rec.department}</td>
-                    <td className="px-6 py-4 text-xs font-medium text-surface-900 dark:text-black">{rec.courseName}</td>
+                    <td className="px-6 py-4 text-xs text-surface-600 dark:text-surface-300">{rec.department}</td>
+                    <td className="px-6 py-4 text-xs font-medium text-surface-900 dark:text-white">{rec.courseName}</td>
                     <td className="px-6 py-4">
-                      <p className="text-xs text-surface-600 dark:text-black font-medium">{rec.dueDate}</p>
+                      <p className="text-xs text-surface-600 dark:text-surface-300 font-medium">{rec.dueDate}</p>
                       {activeTab === 'Overdue' && (
                         <p className="text-[10px] text-danger-500 font-bold">14 days late</p>
                       )}
@@ -194,7 +194,7 @@ export default function CourseCompliancePage() {
               <div className="w-16 h-16 rounded-2xl bg-surface-100 dark:bg-surface-800 flex items-center justify-center mx-auto mb-4">
                 <ShieldCheck className="w-8 h-8 text-surface-300" />
               </div>
-              <h3 className="text-base font-bold text-surface-900 dark:text-black">Perfect Compliance!</h3>
+              <h3 className="text-base font-bold text-surface-900 dark:text-white">Perfect Compliance!</h3>
               <p className="text-sm text-surface-500 max-w-xs mx-auto">All mandatory courses in this category have been addressed.</p>
             </div>
           )}

@@ -28,16 +28,25 @@ export default function ReviewCoursesPage() {
   const fetchReviews = async () => {
     try {
       const res = await api.get('/manager/reviews');
-      // Normalize backend status strings to match active tab keys
+      // Backend already normalizes PENDING_MANAGER_REVIEW → 'Submitted For Review'
+      // and REJECTED → 'Need Changes'. Map to local ReviewStatus.
       const normalized = res.data.map((r: any) => {
         let normalizedStatus: ReviewStatus = 'Submitted';
-        if (r.status === 'Submitted For Review') normalizedStatus = 'Submitted';
-        else if (r.status === 'On Review') normalizedStatus = 'On Review';
-        else if (r.status === 'Need Changes') normalizedStatus = 'Need Changes';
-        else if (r.status === 'Ready To Publish') normalizedStatus = 'Ready To Publish';
+        const st = (r.status || '').toUpperCase();
+        if (st === 'PENDING_MANAGER_REVIEW' || st === 'SUBMITTED FOR REVIEW') normalizedStatus = 'Submitted';
+        else if (st === 'ON_REVIEW') normalizedStatus = 'On Review';
+        else if (st === 'REJECTED' || st === 'NEED CHANGES') normalizedStatus = 'Need Changes';
+        else if (st === 'READY_TO_PUBLISH') normalizedStatus = 'Ready To Publish';
         return { ...r, status: normalizedStatus };
       });
-      setReviews(normalized);
+      // Deduplicate by courseId (guards against StrictMode double-render)
+      const seen = new Set<string>();
+      const deduped = normalized.filter((r: any) => {
+        if (seen.has(r.courseId)) return false;
+        seen.add(r.courseId);
+        return true;
+      });
+      setReviews(deduped);
     } catch (error) {
       console.error("Failed to load course reviews:", error);
     } finally {
@@ -47,6 +56,19 @@ export default function ReviewCoursesPage() {
 
   useEffect(() => {
     fetchReviews();
+
+    // SSE — refresh when HR submits a course or another manager acts
+    const es = new EventSource('http://localhost:8080/api/manager/dashboard/events');
+    es.addEventListener('course_review', () => {
+      console.log('[SSE] Manager ReviewCoursesPage: course_review event, refreshing...');
+      fetchReviews();
+    });
+    es.addEventListener('course_update', () => {
+      console.log('[SSE] Manager ReviewCoursesPage: course_update event, refreshing...');
+      fetchReviews();
+    });
+    es.onerror = () => {}; // silent — non-blocking
+    return () => es.close();
   }, []);
 
   const filteredReviews = useMemo(() => 

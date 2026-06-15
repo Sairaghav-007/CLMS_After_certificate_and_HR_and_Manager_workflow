@@ -38,7 +38,7 @@ public class EmployeeCourseController {
                 : courseRepository.findByActiveTrue();
 
         return courses.stream()
-                .filter(course -> "Published".equalsIgnoreCase(course.getStatus()) || "Ready to Publish".equalsIgnoreCase(course.getStatus()))
+                .filter(course -> "PUBLISHED".equalsIgnoreCase(course.getStatus()) || "READY_TO_PUBLISH".equalsIgnoreCase(course.getStatus()))
                 .map(course -> {
                     CourseProgress progress = courseProgressRepository.findByEmployeeIdAndCourseId(employee.getId(), course.getId())
                             .orElse(null);

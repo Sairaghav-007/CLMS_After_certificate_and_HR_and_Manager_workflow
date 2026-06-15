@@ -35,7 +35,7 @@ export default function AlterCourse() {
   // Filter: ALL Published
   const publishedCourses = useMemo(() => {
     return courses.filter(c => 
-      c.status === 'Published' && 
+      c.status === 'PUBLISHED' && 
       c.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [courses, searchQuery]);

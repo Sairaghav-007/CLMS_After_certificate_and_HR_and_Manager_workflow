@@ -124,7 +124,7 @@ export default function ReportsPage() {
         {/* On-Demand Section */}
         <div className="lg:col-span-1 space-y-6">
           <div className="glass-card rounded-2xl p-6">
-            <h3 className="text-sm font-bold text-surface-900 dark:text-black mb-4 flex items-center gap-2">
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white mb-4 flex items-center gap-2">
               <FileText className="w-4 h-4 text-primary-500" /> Quick Exports
             </h3>
             <div className="space-y-2">
@@ -141,7 +141,7 @@ export default function ReportsPage() {
                 >
                   <div className="flex items-center gap-3">
                     <item.icon className={`w-4 h-4 ${item.color}`} />
-                    <span className="text-xs font-semibold text-surface-700 dark:text-black">{item.title}</span>
+                    <span className="text-xs font-semibold text-surface-700 dark:text-surface-200">{item.title}</span>
                   </div>
                   <Download className="w-3.5 h-3.5 text-surface-400 group-hover:text-primary-500 transition-colors" />
                 </button>
@@ -166,7 +166,7 @@ export default function ReportsPage() {
         {/* Scheduled List */}
         <div className="lg:col-span-3 space-y-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="font-bold text-surface-900 dark:text-black">Active Report Schedules</h3>
+            <h3 className="font-bold text-surface-900 dark:text-white">Active Report Schedules</h3>
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-surface-400" />
               <Search className="w-4 h-4 text-surface-400" />
@@ -191,7 +191,7 @@ export default function ReportsPage() {
                         <FileText className="w-5 h-5" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-surface-900 dark:text-black line-clamp-1">{report.name}</h4>
+                        <h4 className="text-sm font-bold text-surface-900 dark:text-white line-clamp-1">{report.name}</h4>
                         <p className="text-[10px] text-surface-500 font-medium uppercase tracking-wider">{report.type}</p>
                       </div>
                     </div>
@@ -206,15 +206,15 @@ export default function ReportsPage() {
                   <div className="grid grid-cols-3 gap-2 mb-4">
                     <div className="p-2 rounded-lg bg-surface-50 dark:bg-surface-800/50 text-center">
                       <p className="text-[8px] text-surface-400 uppercase font-bold">Frequency</p>
-                      <p className="text-[10px] font-bold text-surface-700 dark:text-black">{report.frequency}</p>
+                      <p className="text-[10px] font-bold text-surface-700 dark:text-surface-200">{report.frequency}</p>
                     </div>
                     <div className="p-2 rounded-lg bg-surface-50 dark:bg-surface-800/50 text-center">
                       <p className="text-[8px] text-surface-400 uppercase font-bold">Format</p>
-                      <p className="text-[10px] font-bold text-surface-700 dark:text-black">{report.format}</p>
+                      <p className="text-[10px] font-bold text-surface-700 dark:text-surface-200">{report.format}</p>
                     </div>
                     <div className="p-2 rounded-lg bg-surface-50 dark:bg-surface-800/50 text-center">
                       <p className="text-[8px] text-surface-400 uppercase font-bold">Next Run</p>
-                      <p className="text-[10px] font-bold text-surface-700 dark:text-black">{report.nextScheduled}</p>
+                      <p className="text-[10px] font-bold text-surface-700 dark:text-surface-200">{report.nextScheduled}</p>
                     </div>
                   </div>
 
@@ -303,7 +303,7 @@ export default function ReportsPage() {
           <div className="pt-4 flex gap-3">
             <button
               onClick={() => setShowCreateModal(false)}
-              className="flex-1 py-3 rounded-xl bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-black text-xs font-bold"
+              className="flex-1 py-3 rounded-xl bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-white text-xs font-bold"
             >
               Discard
             </button>

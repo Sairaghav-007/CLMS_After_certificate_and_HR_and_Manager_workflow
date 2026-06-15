@@ -92,7 +92,7 @@ export default function TeamCompletionPage() {
           className="glass-card rounded-2xl p-6"
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-bold text-surface-900 dark:text-black">Completion Progress Rate</h3>
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Completion Progress Rate</h3>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-full bg-primary-500" />
               <span className="text-[10px] text-surface-500">Completed</span>
@@ -124,7 +124,7 @@ export default function TeamCompletionPage() {
           className="glass-card rounded-2xl p-6"
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-bold text-surface-900 dark:text-black">Distribution Status</h3>
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Distribution Status</h3>
             <List className="w-4 h-4 text-surface-400" />
           </div>
           <ResponsiveContainer width="100%" height={300}>
@@ -163,7 +163,7 @@ export default function TeamCompletionPage() {
         className="glass-card rounded-2xl overflow-hidden"
       >
         <div className="p-5 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
-          <h3 className="font-bold text-surface-900 dark:text-black">Recent Team Events</h3>
+          <h3 className="font-bold text-surface-900 dark:text-white">Recent Team Events</h3>
           <button className="text-xs font-semibold text-primary-600 hover:text-primary-700 font-medium">View All Events</button>
         </div>
         <div className="p-6">
@@ -174,7 +174,7 @@ export default function TeamCompletionPage() {
                   {new Date().getDate() - i} <br/> JUN
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-surface-900 dark:text-black">
+                  <p className="text-xs font-semibold text-surface-900 dark:text-white">
                     {emp.name} completed <span className="text-primary-600">Cybersecurity Fundamentals</span>
                   </p>
                   <p className="text-[10px] text-surface-500 flex items-center gap-1 mt-0.5">

@@ -31,7 +31,7 @@ public class Course {
     private boolean active = true;
 
     @Builder.Default
-    private String status = "Published"; // Default to Published for existing seed data, HR creates as Draft/Submitted
+    private String status = "PUBLISHED"; // Default to PUBLISHED for existing seed data, HR creates as DRAFT/PENDING_MANAGER_REVIEW
 
     private String createdBy;
     

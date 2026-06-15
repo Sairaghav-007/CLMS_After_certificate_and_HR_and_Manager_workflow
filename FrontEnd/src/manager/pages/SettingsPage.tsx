@@ -78,7 +78,7 @@ export default function SettingsPage() {
                       </button>
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-surface-900 dark:text-black">{mockManagerProfile.name}</h3>
+                      <h3 className="text-xl font-bold text-surface-900 dark:text-white">{mockManagerProfile.name}</h3>
                       <p className="text-sm text-surface-500">{mockManagerProfile.designation} • {mockManagerProfile.department}</p>
                       <div className="mt-3 flex gap-2">
                          <StatusBadge status="Active" size="md" />
@@ -110,7 +110,7 @@ export default function SettingsPage() {
               {activeTab === 'Notifications' && (
                 <motion.div key="notif" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                    <div>
-                      <h4 className="text-sm font-bold text-surface-900 dark:text-black mb-1">Communication Channels</h4>
+                      <h4 className="text-sm font-bold text-surface-900 dark:text-white mb-1">Communication Channels</h4>
                       <p className="text-xs text-surface-500 mb-6">Choose how you want to receive alerts and notifications.</p>
                       
                       <div className="space-y-3">
@@ -121,7 +121,7 @@ export default function SettingsPage() {
                          ].map(pref => (
                            <div key={pref.id} className="flex items-center justify-between p-4 rounded-2xl bg-surface-50 dark:bg-surface-800/50 border border-surface-100 dark:border-surface-700">
                               <div>
-                                 <p className="text-xs font-bold text-surface-900 dark:text-black">{pref.label}</p>
+                                 <p className="text-xs font-bold text-surface-900 dark:text-white">{pref.label}</p>
                                  <p className="text-[10px] text-surface-500">{pref.desc}</p>
                               </div>
                               <button 
@@ -136,7 +136,7 @@ export default function SettingsPage() {
                    </div>
 
                    <div className="pt-6 border-t border-surface-200 dark:border-surface-800">
-                      <h4 className="text-sm font-bold text-surface-900 dark:text-black mb-4">Appearance Theme</h4>
+                      <h4 className="text-sm font-bold text-surface-900 dark:text-white mb-4">Appearance Theme</h4>
                       <div className="flex gap-4">
                          {[
                            { id: 'light', icon: Sun, label: 'Light' },
@@ -163,7 +163,7 @@ export default function SettingsPage() {
 
               {activeTab === 'Reports' && (
                 <motion.div key="reports" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-                   <h4 className="text-sm font-bold text-surface-900 dark:text-black mb-4">Report Preferences</h4>
+                    <h4 className="text-sm font-bold text-surface-900 dark:text-white mb-4">Report Preferences</h4>
                    <div className="space-y-4">
                       <div>
                          <label className="text-[10px] font-bold text-surface-400 uppercase tracking-widest block mb-2">Automated Report Frequency</label>

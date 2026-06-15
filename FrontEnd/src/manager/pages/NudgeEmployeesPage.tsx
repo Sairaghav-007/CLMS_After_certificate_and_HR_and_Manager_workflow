@@ -131,7 +131,7 @@ export default function NudgeEmployeesPage() {
         actions={
           <button
             onClick={() => setViewHistory(!viewHistory)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-black hover:bg-surface-200 dark:hover:bg-surface-700 transition-all font-medium text-sm"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-white hover:bg-surface-200 dark:hover:bg-surface-700 transition-all font-medium text-sm"
           >
             {viewHistory ? <Send className="w-4 h-4" /> : <History className="w-4 h-4" />}
             {viewHistory ? 'Send Nudges' : 'Audit Logs'}
@@ -149,7 +149,7 @@ export default function NudgeEmployeesPage() {
             className="glass-card rounded-2xl overflow-hidden"
           >
             <div className="p-5 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
-              <h3 className="font-bold text-surface-900 dark:text-black">Nudge History</h3>
+              <h3 className="font-bold text-surface-900 dark:text-white">Nudge History</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -163,16 +163,16 @@ export default function NudgeEmployeesPage() {
                 <tbody>
                   {nudgeHistory.map((nudge) => (
                     <tr key={nudge.id} className="border-b border-surface-100 dark:border-surface-800 hover:bg-surface-50 dark:hover:bg-surface-800/30">
-                      <td className="px-5 py-4 text-xs text-surface-600 dark:text-black">
+                      <td className="px-5 py-4 text-xs text-surface-600 dark:text-surface-300">
                         {new Date(nudge.sentAt).toLocaleString()}
                       </td>
-                      <td className="px-5 py-4 text-xs font-semibold text-surface-900 dark:text-black">
+                      <td className="px-5 py-4 text-xs font-semibold text-surface-900 dark:text-white">
                         {nudge.employeeName || 'Employee'}
                       </td>
-                      <td className="px-5 py-4 text-xs font-semibold text-surface-900 dark:text-black">
+                      <td className="px-5 py-4 text-xs font-semibold text-surface-900 dark:text-white">
                         {nudge.courseName || 'Course'}
                       </td>
-                      <td className="px-5 py-4 text-xs text-surface-500 dark:text-black truncate max-w-xs">{nudge.message}</td>
+                      <td className="px-5 py-4 text-xs text-surface-500 dark:text-surface-300 truncate max-w-xs">{nudge.message}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -191,7 +191,7 @@ export default function NudgeEmployeesPage() {
             <div className="lg:col-span-2 space-y-6">
               <div className="glass-card rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-surface-900 dark:text-black flex items-center gap-2">
+                  <h3 className="font-bold text-surface-900 dark:text-white flex items-center gap-2">
                     <span className="w-6 h-6 rounded-full gradient-primary text-white text-[10px] flex items-center justify-center">1</span>
                     Select Employees ({selectedEmployees.length} Selected)
                   </h3>
@@ -247,7 +247,7 @@ export default function NudgeEmployeesPage() {
                         {emp.avatar || 'E'}
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs font-semibold text-surface-900 dark:text-black">{emp.name}</p>
+                        <p className="text-xs font-semibold text-surface-900 dark:text-white">{emp.name}</p>
                         <p className="text-[10px] text-surface-500">{emp.department} • {emp.status === 'Non-Compliant' ? 3 : 1} Overdue</p>
                       </div>
                       <StatusBadge status={emp.status} />
@@ -265,7 +265,7 @@ export default function NudgeEmployeesPage() {
             {/* Step 2: Configuration */}
             <div className="space-y-6">
               <div className="glass-card rounded-2xl p-6">
-                <h3 className="font-bold text-surface-900 dark:text-black flex items-center gap-2 mb-4">
+                <h3 className="font-bold text-surface-900 dark:text-white flex items-center gap-2 mb-4">
                   <span className="w-6 h-6 rounded-full gradient-primary text-white text-[10px] flex items-center justify-center">2</span>
                   Compose Nudge
                 </h3>
@@ -340,7 +340,7 @@ export default function NudgeEmployeesPage() {
                               : 'bg-surface-50 dark:bg-surface-800 border-surface-100 dark:border-surface-700 hover:border-surface-300'
                           }`}
                         >
-                          <p className="text-xs font-bold text-surface-900 dark:text-black">{template.name}</p>
+                          <p className="text-xs font-bold text-surface-900 dark:text-white">{template.name}</p>
                           <p className="text-[10px] text-surface-500 line-clamp-2 mt-1">{template.message}</p>
                         </div>
                       ))}
@@ -389,7 +389,7 @@ export default function NudgeEmployeesPage() {
           
           <div className="space-y-2">
             <p className="text-[10px] font-bold text-surface-500 uppercase tracking-wider">Message Preview</p>
-            <div className="p-3 rounded-xl bg-surface-100 dark:bg-surface-800 text-xs text-surface-600 dark:text-black italic">
+            <div className="p-3 rounded-xl bg-surface-100 dark:bg-surface-800 text-xs text-surface-600 dark:text-surface-300 italic">
               "{customMessage}"
             </div>
           </div>
@@ -397,7 +397,7 @@ export default function NudgeEmployeesPage() {
           <div className="flex gap-3 mt-6">
             <button
               onClick={() => setShowConfirmModal(false)}
-              className="flex-1 py-2.5 rounded-xl bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-black font-bold text-sm"
+              className="flex-1 py-2.5 rounded-xl bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-white font-bold text-sm"
             >
               Cancel
             </button>

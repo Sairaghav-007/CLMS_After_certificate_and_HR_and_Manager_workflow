@@ -49,10 +49,31 @@ public class AdminCourseController {
                 .collect(Collectors.toList());
     }
 
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
     @GetMapping("/{id}")
     public ResponseEntity<CourseDto> getCourseById(@PathVariable Long id) {
         Optional<Course> courseOpt = courseRepository.findById(id);
         return courseOpt.map(course -> ResponseEntity.ok(new CourseDto(course)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<Void> deleteCourse(@PathVariable Long id) {
+        // delete entries from related tables using JPQL to prevent constraint violations
+        entityManager.createQuery("DELETE FROM CourseProgress cp WHERE cp.courseId = :id").setParameter("id", id).executeUpdate();
+        entityManager.createQuery("DELETE FROM CourseSectionProgress csp WHERE csp.courseId = :id").setParameter("id", id).executeUpdate();
+        entityManager.createQuery("DELETE FROM Certificate c WHERE c.courseId = :id").setParameter("id", id).executeUpdate();
+        entityManager.createQuery("DELETE FROM CourseEnrollment ce WHERE ce.courseId = :id").setParameter("id", id).executeUpdate();
+        entityManager.createQuery("DELETE FROM ChangeRequest cr WHERE cr.courseId = :id").setParameter("id", id).executeUpdate();
+        entityManager.createQuery("DELETE FROM Notification n WHERE n.courseId = :id").setParameter("id", id).executeUpdate();
+        entityManager.createQuery("DELETE FROM AuditLog al WHERE al.courseId = :id").setParameter("id", id).executeUpdate();
+        entityManager.createQuery("DELETE FROM Question q WHERE q.courseId = :id").setParameter("id", id).executeUpdate();
+        entityManager.createQuery("DELETE FROM CourseContent cc WHERE cc.courseId = :id").setParameter("id", id).executeUpdate();
+        
+        courseRepository.deleteById(id);
+        return ResponseEntity.ok().build();
     }
 }

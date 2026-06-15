@@ -105,7 +105,7 @@ export default function ReviewCourseDetail() {
           Back to Review Queue
         </button>        <div className="flex items-center gap-3 flex-wrap">
           {/* Action Flow - No 'Start Review' button needed */}
-          {(course.status === 'Submitted For Review' || course.status === 'On Review') && (
+          {(course.status === 'PENDING_MANAGER_REVIEW' || course.status === 'ON_REVIEW') && (
             <>
               <button
                 onClick={() => setShowFeedbackModal(true)}
@@ -125,7 +125,7 @@ export default function ReviewCourseDetail() {
           )}
 
           {/* Publishing Controls - Show after OK */}
-          {course.status === 'Ready To Publish' && (
+          {course.status === 'READY_TO_PUBLISH' && (
             <div className="flex items-center gap-3 p-1 rounded-2xl bg-primary-500/5 border border-primary-500/10">
                <div className="px-4 py-1 flex items-center gap-2 text-primary-500">
                   <CheckCircle2 className="w-4 h-4" />
@@ -163,7 +163,7 @@ export default function ReviewCourseDetail() {
                 <div className="flex-1">
                    <div className="flex items-center gap-3 mb-3">
                       <span className="px-3 py-0.5 rounded-full bg-primary-500/10 text-primary-500 text-[10px] font-black uppercase tracking-widest border border-primary-500/20">
-                         {course.status === 'Ready To Publish' ? 'Approved By Manager' : 'Awaiting Decision'}
+                         {course.status === 'READY_TO_PUBLISH' ? 'Approved By Manager' : 'Awaiting Decision'}
                       </span>
                       <span className="text-[10px] font-bold text-surface-400 uppercase tracking-widest">v{course.version}</span>
                    </div>

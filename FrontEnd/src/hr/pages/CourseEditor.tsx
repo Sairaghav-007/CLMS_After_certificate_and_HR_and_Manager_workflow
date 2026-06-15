@@ -62,7 +62,7 @@ export default function CourseEditor() {
     <div className="space-y-6">
       {/* Context Banner */}
       <AnimatePresence>
-        {currentCourse.status === 'Need Changes' && (
+        {currentCourse.status === 'REJECTED' && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -117,7 +117,7 @@ export default function CourseEditor() {
           </motion.div>
         )}
 
-        {currentCourse.parentId && currentCourse.status === 'Draft' && (
+        {currentCourse.parentId && currentCourse.status === 'DRAFT' && (
            <motion.div
              initial={{ opacity: 0, height: 0 }}
              animate={{ opacity: 1, height: 'auto' }}

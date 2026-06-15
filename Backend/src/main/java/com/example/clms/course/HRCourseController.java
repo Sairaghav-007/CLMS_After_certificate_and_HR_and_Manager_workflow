@@ -8,11 +8,14 @@ import com.example.clms.manager.AuditLog;
 import com.example.clms.manager.AuditLogRepository;
 import com.example.clms.manager.ChangeRequest;
 import com.example.clms.manager.ChangeRequestRepository;
+import com.example.clms.manager.SseService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,6 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/hr")
@@ -37,11 +41,95 @@ public class HRCourseController {
     private final ChangeRequestRepository changeRequestRepository;
     private final CourseContentRepository courseContentRepository;
     private final QuestionRepository questionRepository;
+    private final SseService sseService;
 
     private User getAuthenticatedUser() {
         String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("HR user not found"));
+    }
+
+    // ── SSE: HR real-time events ─────────────────────────────────────────────
+    @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamHrEvents() {
+        return sseService.register();
+    }
+
+    // ── HR Dashboard live stats ──────────────────────────────────────────────
+    @GetMapping("/dashboard")
+    @Transactional(readOnly = true)
+    public ResponseEntity<Map<String, Object>> getHrDashboard() {
+        List<Course> all = courseRepository.findAll();
+
+        long total    = all.size();
+        long drafts   = all.stream().filter(c -> "DRAFT".equalsIgnoreCase(c.getStatus())).count();
+        long pending  = all.stream().filter(c ->
+                "PENDING_MANAGER_REVIEW".equalsIgnoreCase(c.getStatus()) ||
+                "ON_REVIEW".equalsIgnoreCase(c.getStatus())).count();
+        long approved = all.stream().filter(c ->
+                "READY_TO_PUBLISH".equalsIgnoreCase(c.getStatus())).count();
+        long published = all.stream().filter(c -> "PUBLISHED".equalsIgnoreCase(c.getStatus())).count();
+        long needChanges = all.stream().filter(c ->
+                "REJECTED".equalsIgnoreCase(c.getStatus())).count();
+
+        // Recent audit logs (last 8)
+        List<AuditLog> recentAudits = auditLogRepository.findAll().stream()
+                .sorted(Comparator.comparing(AuditLog::getTimestamp).reversed())
+                .limit(8)
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> activities = recentAudits.stream().map(a -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", String.valueOf(a.getId()));
+            m.put("title", a.getAction());
+            m.put("description", "Course #" + a.getCourseId() + " — " + a.getStatus());
+            m.put("type", a.getAction().toLowerCase().contains("publish") ? "publish"
+                    : a.getAction().toLowerCase().contains("review") ? "review"
+                    : a.getAction().toLowerCase().contains("edit") ? "edit" : "schedule");
+            m.put("timestamp", a.getTimestamp().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            m.put("icon", a.getAction().toLowerCase().contains("publish") ? "BadgeCheck"
+                    : a.getAction().toLowerCase().contains("review") ? "ClipboardCheck" : "FileEdit");
+            m.put("user", a.getUsername());
+            return m;
+        }).collect(Collectors.toList());
+
+        // Pending actions
+        List<Map<String, Object>> pendingActions = new ArrayList<>();
+        if (pending > 0) {
+            Map<String, Object> pa = new HashMap<>();
+            pa.put("id", "pa-review"); pa.put("title", "Courses Awaiting Manager Review");
+            pa.put("description", pending + " course(s) submitted and waiting for manager approval.");
+            pa.put("count", pending); pa.put("priority", "high");
+            pa.put("actionLabel", "Review"); pa.put("actionType", "review");
+            pendingActions.add(pa);
+        }
+        if (approved > 0) {
+            Map<String, Object> pa = new HashMap<>();
+            pa.put("id", "pa-publish"); pa.put("title", "Courses Ready to Publish");
+            pa.put("description", approved + " course(s) approved and ready for publishing.");
+            pa.put("count", approved); pa.put("priority", "high");
+            pa.put("actionLabel", "Publish"); pa.put("actionType", "publish");
+            pendingActions.add(pa);
+        }
+        if (needChanges > 0) {
+            Map<String, Object> pa = new HashMap<>();
+            pa.put("id", "pa-changes"); pa.put("title", "Courses Need Changes");
+            pa.put("description", needChanges + " course(s) returned by manager with feedback.");
+            pa.put("count", needChanges); pa.put("priority", "medium");
+            pa.put("actionLabel", "View Details"); pa.put("actionType", "view");
+            pendingActions.add(pa);
+        }
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("totalCourses", total);
+        res.put("drafts", drafts);
+        res.put("pendingReview", pending);
+        res.put("approved", approved);
+        res.put("published", published);
+        res.put("needChanges", needChanges);
+        res.put("recentActivities", activities);
+        res.put("pendingActions", pendingActions);
+        return ResponseEntity.ok(res);
     }
 
     @PostMapping("/upload")
@@ -96,14 +184,16 @@ public class HRCourseController {
         }
 
         boolean isNew = (course == null);
+        // Only Published courses are active/visible to employees
+        boolean isPublished = "PUBLISHED".equalsIgnoreCase(req.status);
         if (isNew) {
             course = Course.builder()
                     .title(req.title)
                     .category(req.category)
                     .description(req.description)
                     .dueDate(LocalDate.now().plusDays(30))
-                    .active("Published".equalsIgnoreCase(req.status))
-                    .status(req.status != null ? req.status : "Draft")
+                    .active(isPublished)
+                    .status(req.status != null ? req.status : "DRAFT")
                     .createdBy(hrUser.getFullName())
                     .passingScore(req.passingScore > 0 ? req.passingScore : 70)
                     .maxAttempts(req.maxAttempts > 0 ? req.maxAttempts : 3)
@@ -116,9 +206,8 @@ public class HRCourseController {
             course.setCategory(req.category);
             course.setDescription(req.description);
             course.setStatus(req.status != null ? req.status : course.getStatus());
-            if ("Published".equalsIgnoreCase(req.status)) {
-                course.setActive(true);
-            }
+            // active=true ONLY for Published; all other statuses keep active=false
+            course.setActive(isPublished);
             course.setPassingScore(req.passingScore > 0 ? req.passingScore : course.getPassingScore());
             course.setMaxAttempts(req.maxAttempts > 0 ? req.maxAttempts : course.getMaxAttempts());
             course.setDuration(req.duration > 0 ? req.duration : course.getDuration());
@@ -236,6 +325,14 @@ public class HRCourseController {
                 .build();
         auditLogRepository.save(audit);
 
+        // Broadcast real-time SSE event so HR/Manager queues refresh
+        Map<String, Object> ssePayload = new HashMap<>();
+        ssePayload.put("courseId", savedCourse.getId());
+        ssePayload.put("courseTitle", savedCourse.getTitle());
+        ssePayload.put("status", savedCourse.getStatus());
+        ssePayload.put("action", isNew ? "COURSE_CREATED" : "COURSE_UPDATED");
+        sseService.broadcast("course_update", ssePayload);
+
         Map<String, Object> response = new HashMap<>();
         response.put("id", String.valueOf(finalSavedCourse.getId()));
         response.put("title", finalSavedCourse.getTitle());
@@ -253,7 +350,7 @@ public class HRCourseController {
                     map.put("title", c.getTitle());
                     map.put("description", c.getDescription() != null ? c.getDescription() : "");
                     map.put("category", c.getCategory() != null ? c.getCategory() : "Mandatory");
-                    map.put("status", c.getStatus() != null ? c.getStatus() : "Draft");
+                    map.put("status", c.getStatus() != null ? c.getStatus() : "DRAFT");
                     map.put("createdBy", c.getCreatedBy() != null ? c.getCreatedBy() : "HR Specialist");
                     map.put("passingScore", c.getPassingScore());
                     map.put("maxAttempts", c.getMaxAttempts());

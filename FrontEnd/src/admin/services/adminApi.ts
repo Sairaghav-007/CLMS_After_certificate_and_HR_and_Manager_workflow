@@ -21,4 +21,5 @@ export const learningPathApi = {
 export const courseApi = {
   getAll: () => api.get('/admin/courses').then(r => r.data),
   getById: (id: string) => api.get(`/admin/courses/${id}`).then(r => r.data),
+  remove: (id: string) => api.delete(`/admin/courses/${id}`),
 };

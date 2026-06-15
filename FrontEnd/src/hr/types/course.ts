@@ -1,13 +1,10 @@
 export type CourseStatus = 
-  | 'Draft' 
-  | 'Submitted For Review' 
+  | 'DRAFT' 
   | 'PENDING_MANAGER_REVIEW'
-  | 'On Review' 
-  | 'Need Changes' 
-  | 'Ready To Publish' 
-  | 'Scheduled' 
-  | 'Published'
-  | 'Unpublished';
+  | 'ON_REVIEW' 
+  | 'READY_TO_PUBLISH' 
+  | 'PUBLISHED'
+  | 'REJECTED';
 
 export type CourseCategory = 'Mandatory' | 'Elective' | 'Department-Oriented';
 

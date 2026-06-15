@@ -20,7 +20,7 @@ function freshCourse(): Partial<Course> {
     category: 'Mandatory',
     duration: 0,
     modules: [],
-    status: 'Draft',
+    status: 'DRAFT',
     createdBy: 'Sanjay Kumar',
     department: 'Product Engineering',
     changeRequests: [],
@@ -261,7 +261,7 @@ export const useCourseStore = create<CourseState>()(
           if (base) {
             const updated = {
               ...base,
-              status: 'Published' as CourseStatus,
+              status: 'PUBLISHED' as CourseStatus,
             };
             await api.post('/hr/courses', updated);
             await s.fetchCourses();
@@ -279,7 +279,7 @@ export const useCourseStore = create<CourseState>()(
           if (base) {
             const updated = {
               ...base,
-              status: 'Scheduled' as CourseStatus,
+              status: 'READY_TO_PUBLISH' as CourseStatus,
               scheduledAt: date,
             };
             await api.post('/hr/courses', updated);
@@ -298,7 +298,7 @@ export const useCourseStore = create<CourseState>()(
           if (base) {
             const updated = {
               ...base,
-              status: 'Unpublished' as CourseStatus,
+              status: 'DRAFT' as CourseStatus,
             };
             await api.post('/hr/courses', updated);
             await s.fetchCourses();
@@ -319,13 +319,13 @@ export const useCourseStore = create<CourseState>()(
           id: uuidv4(),
           parentId: original.id,
           version: newVer,
-          status: 'Draft',
+          status: 'DRAFT',
           createdAt: ts(),
           updatedAt: ts(),
           publishedAt: undefined,
           scheduledAt: undefined,
           changeRequests: [],
-          auditLogs: [auditEntry('Sanjay Kumar', `Started editing — new draft ${newVer}`, 'Draft')],
+          auditLogs: [auditEntry('Sanjay Kumar', `Started editing — new draft ${newVer}`, 'DRAFT')],
         };
         set({ currentCourse: draft });
         return draft.id;
@@ -346,7 +346,7 @@ export const useCourseStore = create<CourseState>()(
           const current = get().currentCourse;
           const response = await api.post('/hr/courses', {
             ...current,
-            status: current.status || 'Draft'
+            status: current.status || 'DRAFT'
           });
           if (response.data && response.data.id) {
             set({ currentCourse: { ...current, id: response.data.id, status: response.data.status } });
@@ -364,42 +364,62 @@ export const useCourseStore = create<CourseState>()(
           const { api } = await import('@/api/client');
           const response = await api.get('/hr/courses');
           
-          const mappedCourses: Course[] = response.data.map((c: any) => ({
-            id: c.id,
-            version: c.version || 'v1.0',
-            title: c.title,
-            description: c.description || '',
-            passingScore: c.passingScore || 70,
-            maxAttempts: c.maxAttempts || 3,
-            category: c.category || 'Mandatory',
-            duration: c.duration || 0,
-            status: c.status || 'Draft',
-            createdBy: c.createdBy || 'HR Specialist',
-            department: c.department || 'Engineering',
-            thumbnail: c.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400',
-            modules: (c.modules || []).map((m: any) => ({
-              id: m.id,
-              title: m.title,
-              description: m.description || '',
-              order: m.order,
-              sessions: (m.sessions || []).map((s: any) => ({
-                id: s.id,
-                title: s.title,
-                type: s.type || 'Video',
-                duration: s.duration || 120,
-                order: s.order,
-                videoUrl: s.videoUrl,
-                pdfUrl: s.pdfUrl,
-                pptUrl: s.pptUrl,
-              })),
-            })),
-            changeRequests: c.changeRequests || [],
-            auditLogs: c.auditLogs || [],
-            createdAt: c.createdAt || ts(),
-            updatedAt: c.updatedAt || ts(),
-          }));
+          const mappedCourses: Course[] = response.data.map((c: any) => {
+            // Normalize backend status strings to canonical frontend values
+            let status: CourseStatus = (c.status || 'DRAFT').toUpperCase() as CourseStatus;
+            // Map legacy or potential other forms safely
+            if (status as string === 'DRAFT') status = 'DRAFT';
+            else if (status as string === 'SUBMITTED FOR REVIEW') status = 'PENDING_MANAGER_REVIEW';
+            else if (status as string === 'NEED CHANGES') status = 'REJECTED';
+            else if (status as string === 'READY TO PUBLISH') status = 'READY_TO_PUBLISH';
+            else if (status as string === 'PUBLISHED') status = 'PUBLISHED';
+            else if (status as string === 'ON REVIEW') status = 'ON_REVIEW';
 
-          set({ courses: mappedCourses });
+            return {
+              id: c.id,
+              version: c.version || 'v1.0',
+              title: c.title,
+              description: c.description || '',
+              passingScore: c.passingScore || 70,
+              maxAttempts: c.maxAttempts || 3,
+              category: c.category || 'Mandatory',
+              duration: c.duration || 0,
+              status,
+              createdBy: c.createdBy || 'HR Specialist',
+              department: c.department || 'Engineering',
+              thumbnail: c.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400',
+              modules: (c.modules || []).map((m: any) => ({
+                id: m.id,
+                title: m.title,
+                description: m.description || '',
+                order: m.order,
+                sessions: (m.sessions || []).map((s: any) => ({
+                  id: s.id,
+                  title: s.title,
+                  type: s.type || 'Video',
+                  duration: s.duration || 120,
+                  order: s.order,
+                  videoUrl: s.videoUrl,
+                  pdfUrl: s.pdfUrl,
+                  pptUrl: s.pptUrl,
+                })),
+              })),
+              changeRequests: c.changeRequests || [],
+              auditLogs: c.auditLogs || [],
+              createdAt: c.createdAt || ts(),
+              updatedAt: c.updatedAt || ts(),
+            };
+          });
+
+          // Deduplicate by ID (guards against double-fetches in StrictMode)
+          const seen = new Set<string>();
+          const deduped = mappedCourses.filter(c => {
+            if (seen.has(c.id)) return false;
+            seen.add(c.id);
+            return true;
+          });
+
+          set({ courses: deduped });
         } catch (error) {
           console.error("Failed to fetch courses:", error);
         }

@@ -38,8 +38,8 @@ export function CertificatesPage() {
           courseName: c.courseName,
           completionDate: c.issuedAt,
           employeeName: c.employeeName,
-          verificationUrl: c.verificationUrl,
-          qrCodeData: c.qrCodeData,
+          verificationUrl: c.verificationUrl || 'https://verify.clms.com/certificates/' + c.id,
+          qrCodeData: c.qrCodeData || 'https://verify.clms.com/certificates/' + c.id,
           instructorSignature: "Corporate Trainer",
           instructorName: "L&D Director",
           employeeId: "EMP-" + String(c.id),
@@ -54,12 +54,11 @@ export function CertificatesPage() {
       });
   }, []);
 
-  // Filter courses that have issued certificates
   const certificates = useMemo(() => {
     if (!searchQuery) return dbCertificates;
     return dbCertificates.filter(cert => 
-      cert.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cert.certificateNumber.toLowerCase().includes(searchQuery.toLowerCase())
+      cert.courseName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      cert.certificateNumber?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [dbCertificates, searchQuery]);
 
@@ -76,22 +75,31 @@ export function CertificatesPage() {
     });
 
     try {
-      // Small timeout to render clearly
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Allow the off-screen element to fully render
+      await new Promise((resolve) => setTimeout(resolve, 400));
       
       if (!downloadRef.current) {
         throw new Error("Download element reference not found");
       }
 
+      // html2canvas with explicit background — avoids oklch CSS variable parsing errors
       const canvas = await html2canvas(downloadRef.current, {
-        scale: 2, // Retain high resolution quality
+        scale: 2,
         useCORS: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        logging: false,
+        // Ignore CSS variables that may contain oklch() — render with computed values
+        onclone: (doc) => {
+          const el = doc.querySelector('[data-cert-download]') as HTMLElement;
+          if (el) {
+            el.style.color = '#0f172a';
+            el.style.backgroundColor = '#ffffff';
+          }
+        },
       });
 
       const imgData = canvas.toDataURL('image/png');
       
-      // Initialize landscape PDF (A4 size: 297mm x 210mm)
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
@@ -139,7 +147,7 @@ export function CertificatesPage() {
         </div>
       </div>
 
-      {/* Search Bar filter */}
+      {/* Search Bar */}
       <div className="flex items-center gap-2.5 px-4 py-3 bg-white border border-surface-200 rounded-2xl mb-8 max-w-md">
         <Search size={18} className="text-surface-400" />
         <input 
@@ -203,9 +211,10 @@ export function CertificatesPage() {
                 </button>
                 <button
                   onClick={() => handleDownloadPDF(cert)}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer shadow-sm shadow-primary-500/5"
+                  disabled={isDownloading}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer shadow-sm shadow-primary-500/5 disabled:opacity-60"
                 >
-                  <Download size={14} />
+                  {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                   Download
                 </button>
               </div>
@@ -218,7 +227,6 @@ export function CertificatesPage() {
       <AnimatePresence>
         {selectedCert && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -227,7 +235,6 @@ export function CertificatesPage() {
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
 
-            {/* Modal Body */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -248,48 +255,40 @@ export function CertificatesPage() {
                 </button>
               </div>
 
-              {/* Scrollable container for landscape card */}
+              {/* Certificate Preview */}
               <div className="p-6 overflow-x-auto overflow-y-hidden bg-surface-950 flex justify-center items-center">
-                
-                {/* Landscape Certificate Component */}
                 <div 
                   className="w-[841px] h-[595px] flex-shrink-0 bg-white text-surface-900 p-12 border-[16px] border-double border-amber-600 relative select-none flex flex-col justify-between shadow-lg text-center"
                   style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
                 >
-                  {/* Decorative corner borders */}
                   <div className="absolute top-4 left-4 right-4 bottom-4 border border-amber-600/30 pointer-events-none" />
 
-                  {/* Header Title */}
                   <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white mb-4 border border-amber-500 shadow-md shadow-amber-500/10">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white mb-4 border border-amber-500">
                       <Award size={36} />
                     </div>
                     <h2 className="text-3xl font-bold tracking-wide text-amber-800 uppercase" style={{ letterSpacing: '4px' }}>
                       Certificate of Completion
                     </h2>
                     <div className="w-40 h-[1.5px] bg-amber-500/50 my-3" />
-                    <p className="text-[11px] uppercase tracking-widest text-surface-450 font-black" style={{ fontFamily: 'var(--font-sans)', letterSpacing: '2px' }}>
+                    <p className="text-[11px] uppercase tracking-widest text-surface-500 font-black" style={{ letterSpacing: '2px' }}>
                       This credential certifies that
                     </p>
                   </div>
 
-                  {/* Employee Name */}
                   <div className="my-2">
-                    <h1 className="text-4xl font-extrabold text-surface-950 border-b border-surface-200 pb-2 max-w-xl mx-auto italic font-serif">
+                    <h1 className="text-4xl font-extrabold text-surface-950 border-b border-surface-200 pb-2 max-w-xl mx-auto italic">
                       {selectedCert.employeeName}
                     </h1>
-                    <p className="text-xs text-surface-500 mt-3 max-w-md mx-auto leading-relaxed" style={{ fontFamily: 'var(--font-sans)', fontWeight: '500' }}>
+                    <p className="text-xs text-surface-500 mt-3 max-w-md mx-auto leading-relaxed" style={{ fontWeight: '500' }}>
                       has successfully completed the corporate competency training requirements for:
                     </p>
-                    <h3 className="text-lg font-bold text-amber-800 mt-2 max-w-lg mx-auto leading-tight" style={{ fontFamily: 'var(--font-sans)', fontWeight: '800' }}>
+                    <h3 className="text-lg font-bold text-amber-800 mt-2 max-w-lg mx-auto leading-tight" style={{ fontWeight: '800' }}>
                       {selectedCert.courseName}
                     </h3>
                   </div>
 
-                  {/* Footer metadata details */}
-                  <div className="grid grid-cols-3 items-end gap-6 border-t border-surface-100 pt-6" style={{ fontFamily: 'var(--font-sans)' }}>
-                    
-                    {/* Left: Metadata */}
+                  <div className="grid grid-cols-3 items-end gap-6 border-t border-surface-100 pt-6">
                     <div className="text-left space-y-1.5 text-[10px] text-surface-500 font-semibold leading-tight">
                       <p className="text-surface-400 uppercase tracking-wider text-[8px] font-black">Credential Details</p>
                       <p>Number: <span className="font-bold text-surface-800">{selectedCert.certificateNumber}</span></p>
@@ -297,29 +296,21 @@ export function CertificatesPage() {
                       <p>ID: <span className="font-bold text-surface-800">{selectedCert.employeeId}</span></p>
                     </div>
 
-                    {/* Middle: Signature */}
                     <div className="flex flex-col items-center">
                       <div className="w-32 border-b border-surface-300 pb-1 italic font-serif text-sm text-surface-700 font-bold max-w-[150px] truncate">
                         {selectedCert.instructorSignature || selectedCert.instructorName}
                       </div>
-                      <p className="text-[9px] uppercase tracking-widest text-surface-450 font-black mt-1.5">Authorized Signatory</p>
+                      <p className="text-[9px] uppercase tracking-widest text-surface-500 font-black mt-1.5">Authorized Signatory</p>
                     </div>
 
-                    {/* Right: Verification QR Code SVG */}
                     <div className="flex flex-col items-end">
                       <div className="p-1 bg-white border border-surface-200 rounded-lg">
-                        <QRCodeSVG 
-                          value={selectedCert.verificationUrl}
-                          size={55}
-                          level="H"
-                        />
+                        <QRCodeSVG value={selectedCert.verificationUrl} size={55} level="H" />
                       </div>
                       <p className="text-[8px] uppercase tracking-widest text-surface-400 font-black mt-1.5">Scan to Verify</p>
                     </div>
-
                   </div>
                 </div>
-
               </div>
 
               {/* Modal Actions */}
@@ -333,7 +324,7 @@ export function CertificatesPage() {
                 <button
                   onClick={() => handleDownloadPDF(selectedCert)}
                   disabled={isDownloading}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-colors cursor-pointer shadow-md shadow-primary-500/10"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-colors cursor-pointer shadow-md shadow-primary-500/10 disabled:opacity-60"
                 >
                   {isDownloading ? (
                     <>
@@ -348,81 +339,88 @@ export function CertificatesPage() {
                   )}
                 </button>
               </div>
-
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Off-screen download target */}
+      {/* Off-screen download target — ONLY inline hex/rgb styles, NO Tailwind color classes.
+          html2canvas cannot parse oklch() color functions that Tailwind v4 emits at runtime. */}
       {downloadCert && (
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', overflow: 'hidden' }}>
-          <div 
+          <div
             ref={downloadRef}
-            className="w-[841px] h-[595px] flex-shrink-0 bg-white text-surface-900 p-12 border-[16px] border-double border-amber-600 relative select-none flex flex-col justify-between shadow-lg text-center"
-            style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+            data-cert-download="true"
+            style={{
+              width: '841px',
+              height: '595px',
+              flexShrink: 0,
+              backgroundColor: '#ffffff',
+              color: '#0f172a',
+              padding: '48px',
+              border: '16px double #b45309',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              textAlign: 'center',
+              fontFamily: "'Georgia', 'Times New Roman', serif",
+            }}
           >
-            {/* Decorative corner borders */}
-            <div className="absolute top-4 left-4 right-4 bottom-4 border border-amber-600/30 pointer-events-none" />
+            <div style={{ position: 'absolute', top: '16px', left: '16px', right: '16px', bottom: '16px', border: '1px solid rgba(180,83,9,0.3)', pointerEvents: 'none' }} />
 
-            {/* Header Title */}
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white mb-4 border border-amber-500 shadow-md shadow-amber-500/10">
-                <Award size={36} />
+            {/* Header */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #f59e0b, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', border: '1px solid #d97706' }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="8" r="6"/>
+                  <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+                </svg>
               </div>
-              <h2 className="text-3xl font-bold tracking-wide text-amber-800 uppercase" style={{ letterSpacing: '4px' }}>
+              <h2 style={{ fontSize: '28px', fontWeight: 'bold', letterSpacing: '4px', color: '#92400e', textTransform: 'uppercase', margin: '0 0 8px' }}>
                 Certificate of Completion
               </h2>
-              <div className="w-40 h-[1.5px] bg-amber-500/50 my-3" />
-              <p className="text-[11px] uppercase tracking-widest text-surface-450 font-black" style={{ fontFamily: 'var(--font-sans)', letterSpacing: '2px' }}>
+              <div style={{ width: '160px', height: '2px', backgroundColor: 'rgba(245,158,11,0.5)', margin: '12px auto' }} />
+              <p style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '2px', color: '#64748b', fontWeight: 900, fontFamily: 'Inter, system-ui, sans-serif', margin: 0 }}>
                 This credential certifies that
               </p>
             </div>
 
-            {/* Employee Name */}
-            <div className="my-2">
-              <h1 className="text-4xl font-extrabold text-surface-950 border-b border-surface-200 pb-2 max-w-xl mx-auto italic font-serif">
+            {/* Employee name */}
+            <div style={{ margin: '8px 0' }}>
+              <h1 style={{ fontSize: '36px', fontWeight: 800, color: '#020617', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', maxWidth: '520px', margin: '0 auto', fontStyle: 'italic' }}>
                 {downloadCert.employeeName}
               </h1>
-              <p className="text-xs text-surface-500 mt-3 max-w-md mx-auto leading-relaxed" style={{ fontFamily: 'var(--font-sans)', fontWeight: '500' }}>
+              <p style={{ fontSize: '12px', color: '#64748b', marginTop: '12px', maxWidth: '400px', margin: '12px auto 0', lineHeight: '1.6', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 500 }}>
                 has successfully completed the corporate competency training requirements for:
               </p>
-              <h3 className="text-lg font-bold text-amber-800 mt-2 max-w-lg mx-auto leading-tight" style={{ fontFamily: 'var(--font-sans)', fontWeight: '800' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#92400e', marginTop: '8px', maxWidth: '500px', margin: '8px auto 0', lineHeight: '1.4', fontFamily: 'Inter, system-ui, sans-serif' }}>
                 {downloadCert.courseName}
               </h3>
             </div>
 
-            {/* Footer metadata details */}
-            <div className="grid grid-cols-3 items-end gap-6 border-t border-surface-100 pt-6" style={{ fontFamily: 'var(--font-sans)' }}>
-              
-              {/* Left: Metadata */}
-              <div className="text-left space-y-1.5 text-[10px] text-surface-500 font-semibold leading-tight">
-                <p className="text-surface-400 uppercase tracking-wider text-[8px] font-black">Credential Details</p>
-                <p>Number: <span className="font-bold text-surface-800">{downloadCert.certificateNumber}</span></p>
-                <p>Date: <span className="font-bold text-surface-800">{formatDate(downloadCert.completionDate)}</span></p>
-                <p>ID: <span className="font-bold text-surface-800">{downloadCert.employeeId}</span></p>
+            {/* Footer */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', borderTop: '1px solid #f1f5f9', paddingTop: '24px', fontFamily: 'Inter, system-ui, sans-serif', alignItems: 'end' }}>
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 900, color: '#94a3b8', marginBottom: '6px' }}>Credential Details</p>
+                <p style={{ fontSize: '10px', color: '#64748b', margin: '2px 0', fontWeight: 600 }}>Number: <strong style={{ color: '#1e293b' }}>{downloadCert.certificateNumber}</strong></p>
+                <p style={{ fontSize: '10px', color: '#64748b', margin: '2px 0', fontWeight: 600 }}>Date: <strong style={{ color: '#1e293b' }}>{formatDate(downloadCert.completionDate)}</strong></p>
+                <p style={{ fontSize: '10px', color: '#64748b', margin: '2px 0', fontWeight: 600 }}>ID: <strong style={{ color: '#1e293b' }}>{downloadCert.employeeId}</strong></p>
               </div>
 
-              {/* Middle: Signature */}
-              <div className="flex flex-col items-center">
-                <div className="w-32 border-b border-surface-300 pb-1 italic font-serif text-sm text-surface-700 font-bold max-w-[150px] truncate">
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ borderBottom: '1px solid #cbd5e1', paddingBottom: '4px', fontSize: '13px', fontStyle: 'italic', color: '#475569', fontWeight: 'bold', width: '128px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
                   {downloadCert.instructorSignature || downloadCert.instructorName}
                 </div>
-                <p className="text-[9px] uppercase tracking-widest text-surface-450 font-black mt-1.5">Authorized Signatory</p>
+                <p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '2px', color: '#94a3b8', fontWeight: 900, marginTop: '6px' }}>Authorized Signatory</p>
               </div>
 
-              {/* Right: Verification QR Code SVG */}
-              <div className="flex flex-col items-end">
-                <div className="p-1 bg-white border border-surface-200 rounded-lg">
-                  <QRCodeSVG 
-                    value={downloadCert.verificationUrl}
-                    size={55}
-                    level="H"
-                  />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                <div style={{ padding: '4px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                  <QRCodeSVG value={downloadCert.verificationUrl || 'https://verify.clms.com'} size={55} level="H" fgColor="#000000" bgColor="#ffffff" />
                 </div>
-                <p className="text-[8px] uppercase tracking-widest text-surface-400 font-black mt-1.5">Scan to Verify</p>
+                <p style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '2px', color: '#94a3b8', fontWeight: 900, marginTop: '6px' }}>Scan to Verify</p>
               </div>
-
             </div>
           </div>
         </div>

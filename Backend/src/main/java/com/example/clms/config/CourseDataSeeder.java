@@ -24,15 +24,15 @@ public class CourseDataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         // Seed Users
-        seedUser("admin@clms.com", "Admin User", Role.ADMIN, "admin123", "Management", "Administrator");
-        seedUser("hr@clms.com", "HR Specialist", Role.HR, "hr123", "Human Resources", "HR Administrator");
-        seedUser("manager@clms.com", "Sarah Mitchell", Role.MANAGER, "manager123", "Engineering", "Engineering Manager");
+        seedUser("admin@clms.com", "Admin User", Role.ADMIN, "Welcome@123", "Management", "Administrator");
+        seedUser("hr@clms.com", "HR Specialist", Role.HR, "Welcome@123", "Human Resources", "HR Administrator");
+        seedUser("manager@clms.com", "Sarah Mitchell", Role.MANAGER, "Welcome@123", "Engineering", "Engineering Manager");
         
         // Seed Employees
-        seedUser("employee@clms.com", "John Doe", Role.EMPLOYEE, "employee123", "Engineering", "Junior Developer");
-        seedUser("alice@clms.com", "Alice Johnson", Role.EMPLOYEE, "employee123", "Engineering", "Frontend Developer");
-        seedUser("bob@clms.com", "Bob Smith", Role.EMPLOYEE, "employee123", "Engineering", "DevOps Engineer");
-        seedUser("charlie@clms.com", "Charlie Brown", Role.EMPLOYEE, "employee123", "Engineering", "Quality Assurance");
+        seedUser("employee@clms.com", "John Doe", Role.EMPLOYEE, "Welcome@123", "Engineering", "Junior Developer");
+        seedUser("alice@clms.com", "Alice Johnson", Role.EMPLOYEE, "Welcome@123", "Engineering", "Frontend Developer");
+        seedUser("bob@clms.com", "Bob Smith", Role.EMPLOYEE, "Welcome@123", "Engineering", "DevOps Engineer");
+        seedUser("charlie@clms.com", "Charlie Brown", Role.EMPLOYEE, "Welcome@123", "Engineering", "Quality Assurance");
 
         // Seed some specific states for employees
         User bob = userRepository.findByEmail("bob@clms.com").orElse(null);
@@ -53,7 +53,7 @@ public class CourseDataSeeder implements CommandLineRunner {
                 .description("Learn password safety, phishing detection, secure browsing, and reporting workflows.")
                 .dueDate(LocalDate.now().plusDays(12))
                 .active(true)
-                .status("Published")
+                .status("PUBLISHED")
                 .build();
 
         CourseModule securityIntro = module(security, "Module 1: Security Foundations", 1);
@@ -77,7 +77,7 @@ public class CourseDataSeeder implements CommandLineRunner {
                 .description("Understand workplace incident prevention, emergency procedures, and safety reporting.")
                 .dueDate(LocalDate.now().plusDays(7))
                 .active(true)
-                .status("Published")
+                .status("PUBLISHED")
                 .build();
 
         CourseModule safetyModule = module(safety, "Module 1: Safety Essentials", 1);
@@ -95,7 +95,7 @@ public class CourseDataSeeder implements CommandLineRunner {
                 .description("Build communication habits, feedback skills, and people-management fundamentals.")
                 .dueDate(LocalDate.now().plusDays(20))
                 .active(true)
-                .status("Published")
+                .status("PUBLISHED")
                 .build();
 
         CourseModule leadershipModule = module(leadership, "Module 1: Communication", 1);
@@ -124,7 +124,7 @@ public class CourseDataSeeder implements CommandLineRunner {
                 .description("Build scalable Microservices architecture.")
                 .dueDate(LocalDate.now().plusDays(40))
                 .active(false)
-                .status("On Review")
+                .status("ON_REVIEW")
                 .createdBy("HR Specialist")
                 .build();
 
@@ -134,7 +134,7 @@ public class CourseDataSeeder implements CommandLineRunner {
                 .description("Ethical behavior and corporate values guide.")
                 .dueDate(LocalDate.now().plusDays(40))
                 .active(false)
-                .status("Need Changes")
+                .status("REJECTED")
                 .createdBy("HR Specialist")
                 .build();
 
