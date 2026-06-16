@@ -77,6 +77,9 @@ public class EmployeeDashboardController {
             }
         }
 
+        // Count certificates earned by this employee
+        int certificatesEarned = certificateRepository.findByEmployeeId(empId).size();
+
         // Chart data: show status distribution
         List<String> chartLabels = List.of("Completed", "In Progress", "Due Soon", "Upcoming");
         List<Integer> chartValues = List.of(completedCourses, inProgressCourses, dueCourses, upcomingCourses);
@@ -86,6 +89,7 @@ public class EmployeeDashboardController {
                 dueCourses,
                 inProgressCourses,
                 upcomingCourses,
+                certificatesEarned,
                 chartLabels,
                 chartValues
         );

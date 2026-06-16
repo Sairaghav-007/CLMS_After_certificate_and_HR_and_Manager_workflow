@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -9,14 +9,20 @@ import {
   ArrowRight, Filter, Settings
 } from 'lucide-react';
 import { PageHeader, Modal } from '../components/ui';
-import { mockScheduledReports, mockEmployees } from '../data/mockData';
 import { useAuditStore } from '../stores';
+import { api } from '@/api/client';
 import type { ReportType, ReportFrequency, ExportFormat, ScheduledReport } from '../types';
 
 export default function ReportsPage() {
-  const [reports, setReports] = useState<ScheduledReport[]>(mockScheduledReports);
+  const [reports, setReports] = useState<ScheduledReport[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [employees, setEmployees] = useState<any[]>([]);
   const addLog = useAuditStore(s => s.addLog);
+
+  // Fetch real employees for download purposes
+  useEffect(() => {
+    api.get('/manager/employees').then(res => setEmployees(res.data)).catch(() => {});
+  }, []);
 
   // New Report State
   const [newReportName, setNewReportName] = useState('');
@@ -81,28 +87,32 @@ export default function ReportsPage() {
   };
 
   const handleManualDownload = (report: ScheduledReport) => {
-    addLog({ action: 'Report Downloaded', user: 'Sarah Mitchell', details: `Manually downloaded ${report.name} (${report.format})` });
+    addLog({ action: 'Report Downloaded', user: 'Manager', details: `Manually downloaded ${report.name} (${report.format})` });
     
-    const dummyData = mockEmployees.map(emp => ({
-      'Employee': emp.name,
-      'Department': emp.department,
-      'Status': emp.status,
-      'Progress': `${emp.completedCourses}/${emp.assignedCourses}`
-    }));
+    const data = employees.length > 0 
+      ? employees.map((emp: any) => ({
+          'Employee': emp.name,
+          'Department': emp.department,
+          'Status': emp.status,
+          'Progress': `${emp.completedCourses}/${emp.assignedCourses}`
+        }))
+      : [{ 'Note': 'No employee data available yet.' }];
 
-    handleExportData(dummyData, report.name, report.format);
+    handleExportData(data, report.name, report.format);
   };
 
   const handleQuickExport = (title: string) => {
-    addLog({ action: 'Report Downloaded', user: 'Sarah Mitchell', details: `Quick export: ${title}` });
+    addLog({ action: 'Report Downloaded', user: 'Manager', details: `Quick export: ${title}` });
     
-    const dummyData = mockEmployees.slice(0, 10).map(emp => ({
-      'Name': emp.name,
-      'Department': emp.department,
-      'Status': emp.status
-    }));
+    const data = employees.length > 0
+      ? employees.slice(0, 20).map((emp: any) => ({
+          'Name': emp.name,
+          'Department': emp.department,
+          'Status': emp.status
+        }))
+      : [{ 'Note': 'No employee data available yet.' }];
 
-    handleExportData(dummyData, title, 'CSV');
+    handleExportData(data, title, 'CSV');
   };
 
   return (

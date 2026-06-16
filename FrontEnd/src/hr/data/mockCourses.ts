@@ -10,7 +10,7 @@ export const mockCourses: Course[] = [
     maxAttempts: 3,
     category: 'Mandatory',
     duration: 5,
-    status: 'Draft',
+    status: 'DRAFT',
     thumbnail: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&auto=format&fit=crop&q=60',
     createdBy: 'Sanjay Kumar',
     department: 'Product Engineering',

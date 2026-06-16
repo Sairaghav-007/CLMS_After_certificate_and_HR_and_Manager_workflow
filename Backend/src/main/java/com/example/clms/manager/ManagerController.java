@@ -85,7 +85,6 @@ public class ManagerController {
                 .collect(Collectors.toList());
     }
 
-    // Dashboard Stats / KPI Endpoint
     @GetMapping("/dashboard/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
         List<User> employees = userRepository.findAll().stream()
@@ -226,24 +225,98 @@ public class ManagerController {
         return ResponseEntity.ok(trend);
     }
 
-    // Compliance stats split
+    // Compliance stats — real computed rates
     @GetMapping("/compliance")
     public ResponseEntity<Map<String, Object>> getCompliance() {
         List<User> employees = userRepository.findAll().stream()
                 .filter(u -> u.getRole() == Role.EMPLOYEE)
                 .collect(Collectors.toList());
 
-        long compliant = employees.stream().filter(e -> "Compliant".equalsIgnoreCase(e.getStatus())).count();
-        long atRisk = employees.stream().filter(e -> "At Risk".equalsIgnoreCase(e.getStatus())).count();
-        long nonCompliant = employees.stream().filter(e -> "Non-Compliant".equalsIgnoreCase(e.getStatus())).count();
+        List<Course> activeCourses = courseRepository.findByActiveTrue();
+        List<CourseProgress> allProgress = courseProgressRepository.findAll();
+
+        long totalRecords = 0;
+        long completedRecords = 0;
+        int totalScores = 0;
+        int scoredCount = 0;
+
+        for (User emp : employees) {
+            List<Course> empCourses = getAssignedCoursesForEmployee(emp, activeCourses);
+            for (Course course : empCourses) {
+                totalRecords++;
+                CourseProgress p = allProgress.stream()
+                        .filter(pr -> pr.getEmployeeId().equals(emp.getId()) && pr.getCourseId().equals(course.getId()))
+                        .findFirst().orElse(null);
+                if (p != null && p.isCompleted()) {
+                    completedRecords++;
+                }
+                if (p != null && p.getLastScore() != null && p.getLastScore() > 0) {
+                    totalScores += p.getLastScore();
+                    scoredCount++;
+                }
+            }
+        }
+
+        double complianceRate = totalRecords > 0 ? Math.round(((double) completedRecords / totalRecords) * 1000.0) / 10.0 : 0.0;
+        double pendingRate = Math.round((100.0 - complianceRate) * 10.0) / 10.0;
+        double avgScore = scoredCount > 0 ? Math.round(((double) totalScores / scoredCount) * 10.0) / 10.0 : 0.0;
 
         Map<String, Object> res = new HashMap<>();
-        res.put("compliant", compliant);
-        res.put("atRisk", atRisk);
-        res.put("nonCompliant", nonCompliant);
+        res.put("complianceRate", complianceRate);
+        res.put("pendingRate", pendingRate);
+        res.put("avgPassingScore", avgScore);
+        res.put("totalRecords", totalRecords);
+        res.put("completedRecords", completedRecords);
 
         return ResponseEntity.ok(res);
     }
+
+    // Compliance records table — all employees x their assigned courses with status
+    @GetMapping("/compliance/records")
+    public ResponseEntity<List<Map<String, Object>>> getComplianceRecords() {
+        List<User> employees = userRepository.findAll().stream()
+                .filter(u -> u.getRole() == Role.EMPLOYEE)
+                .collect(Collectors.toList());
+
+        List<Course> activeCourses = courseRepository.findByActiveTrue();
+        List<CourseProgress> allProgress = courseProgressRepository.findAll();
+        LocalDate today = LocalDate.now();
+
+        List<Map<String, Object>> records = new ArrayList<>();
+
+        for (User emp : employees) {
+            List<Course> empCourses = getAssignedCoursesForEmployee(emp, activeCourses);
+            for (Course course : empCourses) {
+                CourseProgress p = allProgress.stream()
+                        .filter(pr -> pr.getEmployeeId().equals(emp.getId()) && pr.getCourseId().equals(course.getId()))
+                        .findFirst().orElse(null);
+
+                String status;
+                if (p != null && p.isCompleted()) {
+                    status = "Completed";
+                } else if (p != null && p.getProgressPercentage() > 0) {
+                    status = "In Progress";
+                } else if (course.getDueDate() != null && course.getDueDate().isBefore(today)) {
+                    status = "Overdue";
+                } else {
+                    status = "Not Completed";
+                }
+
+                Map<String, Object> rec = new HashMap<>();
+                rec.put("employeeId", "EMP-" + emp.getId());
+                rec.put("employeeName", emp.getFullName());
+                rec.put("department", emp.getDepartment() != null ? emp.getDepartment() : "Engineering");
+                rec.put("courseName", course.getTitle());
+                rec.put("status", status);
+                rec.put("score", p != null && p.getLastScore() != null ? p.getLastScore() : 0);
+                rec.put("dueDate", course.getDueDate() != null ? course.getDueDate().toString() : "");
+                records.add(rec);
+            }
+        }
+
+        return ResponseEntity.ok(records);
+    }
+
 
     // Get Full Course Detail for Manager Review
     @GetMapping("/course-detail/{id}")

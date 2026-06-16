@@ -70,6 +70,7 @@ public record CourseDetailResponse(
             Integer sectionOrder,
             int progress,
             boolean isCompleted,
-            Integer duration
+            Integer duration,
+            Integer totalPages
     ) {}
 }

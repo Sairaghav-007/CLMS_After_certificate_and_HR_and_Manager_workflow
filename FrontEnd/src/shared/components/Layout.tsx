@@ -22,7 +22,8 @@ import {
   TrendingUp,
   FolderKanban,
   Link2 as Linkedin,
-  Loader2
+  Loader2,
+  Map
 } from 'lucide-react';
 import { useAuthStore, useUIStore, useNotificationStore } from '@/shared/store';
 import { ToastContainer } from './Toast';
@@ -108,6 +109,7 @@ export function AppLayout() {
         return [
           { path: '/employee', label: 'Dashboard', icon: LayoutDashboard },
           { path: '/employee/courses', label: 'Course Library', icon: BookOpen },
+          { path: '/employee/learning-paths', label: 'Learning Paths', icon: Map },
           { path: '/employee/certificates', label: 'Certificates', icon: Award },
         ];
     }

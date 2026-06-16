@@ -1,60 +1,84 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, AlertTriangle, CheckCircle2, Send, ChevronRight } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, CheckCircle2, Send, ChevronRight, Loader2 } from 'lucide-react';
 import { PageHeader, FilterBar, StatusBadge, ProgressBar, Tabs, ExportButton } from '../components/ui';
-import { mockComplianceRecords } from '../data/mockData';
 import { useAuditStore } from '../stores';
 import { exportData } from '../lib/exportUtils';
+import { api } from '@/api/client';
 import type { ComplianceTab } from '../types';
+
+interface ComplianceRecord {
+  employeeId: string;
+  employeeName: string;
+  department: string;
+  courseName: string;
+  status: string;
+  score: number;
+  dueDate: string;
+}
+
+interface ComplianceStats {
+  complianceRate: number;
+  pendingRate: number;
+  avgPassingScore: number;
+}
 
 export default function CourseCompliancePage() {
   const [activeTab, setActiveTab] = useState<ComplianceTab>('Overdue');
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Individual');
+  const [records, setRecords] = useState<ComplianceRecord[]>([]);
+  const [stats, setStats] = useState<ComplianceStats>({ complianceRate: 0, pendingRate: 0, avgPassingScore: 0 });
+  const [loading, setLoading] = useState(true);
   const addLog = useAuditStore(s => s.addLog);
 
-  const stats = {
-    compliance: 88.5,
-    pending: 11.5,
-    avgScore: 84.8,
-  };
+  useEffect(() => {
+    Promise.all([
+      api.get('/manager/compliance'),
+      api.get('/manager/compliance/records'),
+    ]).then(([statsRes, recordsRes]) => {
+      setStats({
+        complianceRate: statsRes.data.complianceRate ?? 0,
+        pendingRate: statsRes.data.pendingRate ?? 0,
+        avgPassingScore: statsRes.data.avgPassingScore ?? 0,
+      });
+      setRecords(recordsRes.data);
+    }).catch(err => console.error('Failed to load compliance data:', err))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filteredRecords = useMemo(() => {
-    return mockComplianceRecords.filter(record => {
+    return records.filter(record => {
       const term = search.toLowerCase();
       const matchSearch = !term || record.employeeName.toLowerCase().includes(term) || record.courseName.toLowerCase().includes(term);
       const matchTab = record.status === activeTab;
       return matchSearch && matchTab;
     });
-  }, [search, activeTab]);
+  }, [records, search, activeTab]);
 
   const handleExport = (fmt: string) => {
-    addLog({ action: 'Report Downloaded', user: 'Sarah Mitchell', details: `Exported Compliance Report (${fmt})` });
-
+    addLog({ action: 'Report Downloaded', user: 'Manager', details: `Exported Compliance Report (${fmt})` });
     exportData(fmt, {
       filename: `compliance_${activeTab.toLowerCase()}_report`,
       title: `Course Compliance - ${activeTab} Records`,
-      headers: ['Employee Name', 'Department', 'Course Name', 'Due Date', 'Status'],
-      data: filteredRecords.map(rec => [
-        rec.employeeName,
-        rec.department,
-        rec.courseName,
-        rec.dueDate,
-        rec.status
-      ]),
-      jsonData: filteredRecords.map(rec => ({
-        'Employee': rec.employeeName,
-        'Dept': rec.department,
-        'Course': rec.courseName,
-        'Due Date': rec.dueDate,
-        'Status': rec.status
-      }))
+      headers: ['Employee Name', 'Department', 'Course Name', 'Due Date', 'Status', 'Score'],
+      data: filteredRecords.map(rec => [rec.employeeName, rec.department, rec.courseName, rec.dueDate, rec.status, rec.score]),
+      jsonData: filteredRecords.map(rec => ({ 'Employee': rec.employeeName, 'Dept': rec.department, 'Course': rec.courseName, 'Due Date': rec.dueDate, 'Status': rec.status, 'Score': rec.score }))
     });
   };
 
-  const handleRemind = (rec: any) => {
-    addLog({ action: 'Reminder Sent', user: 'Sarah Mitchell', details: `Reminder sent to ${rec.employeeName} for ${rec.courseName}` });
+  const handleRemind = (rec: ComplianceRecord) => {
+    addLog({ action: 'Reminder Sent', user: 'Manager', details: `Reminder sent to ${rec.employeeName} for ${rec.courseName}` });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-6 h-6 animate-spin text-primary-500 mr-2" />
+        <span className="text-sm font-semibold text-surface-500">Loading compliance data…</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -71,10 +95,10 @@ export default function CourseCompliancePage() {
             <ShieldCheck className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-surface-900 dark:text-white">{stats.compliance}%</p>
+            <p className="text-2xl font-bold text-surface-900 dark:text-white">{stats.complianceRate}%</p>
             <p className="text-xs font-medium text-surface-500 uppercase tracking-wider">Compliance Rate</p>
             <div className="w-32 mt-2">
-              <ProgressBar value={stats.compliance} color="bg-accent-500" showLabel={false} />
+              <ProgressBar value={stats.complianceRate} color="bg-accent-500" showLabel={false} />
             </div>
           </div>
         </div>
@@ -84,10 +108,10 @@ export default function CourseCompliancePage() {
             <AlertTriangle className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-surface-900 dark:text-white">{stats.pending}%</p>
+            <p className="text-2xl font-bold text-surface-900 dark:text-white">{stats.pendingRate}%</p>
             <p className="text-xs font-medium text-surface-500 uppercase tracking-wider">Total Pending</p>
             <div className="w-32 mt-2">
-              <ProgressBar value={stats.pending} color="bg-danger-500" showLabel={false} />
+              <ProgressBar value={stats.pendingRate} color="bg-danger-500" showLabel={false} />
             </div>
           </div>
         </div>
@@ -97,9 +121,9 @@ export default function CourseCompliancePage() {
             <CheckCircle2 className="w-7 h-7" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-surface-900 dark:text-white">{stats.avgScore}%</p>
+            <p className="text-2xl font-bold text-surface-900 dark:text-white">{stats.avgPassingScore}%</p>
             <p className="text-xs font-medium text-surface-500 uppercase tracking-wider">Avg Passing Score</p>
-            <p className="text-[10px] text-accent-600 font-bold mt-1">+2.4% from last month</p>
+            <p className="text-[10px] text-accent-600 font-bold mt-1">From DB — real scores</p>
           </div>
         </div>
       </div>
@@ -130,20 +154,20 @@ export default function CourseCompliancePage() {
           <table className="w-full">
             <thead>
               <tr className="bg-surface-50/50 dark:bg-surface-800/30">
-                {['Recipient', 'Department', 'Mandatory Course', 'Due Date', 'Status', 'Actions'].map(h => (
+                {['Recipient', 'Department', 'Mandatory Course', 'Due Date', 'Score', 'Status', 'Actions'].map(h => (
                   <th key={h} className="px-6 py-3 text-left text-[10px] font-bold text-surface-400 uppercase tracking-widest">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
-              <AnimatePresence mode="popLayout">
+            {/* Key changes on tab switch prevents AnimatePresence glitch — use mode="wait" on tbody wrapper */}
+            <tbody key={activeTab}>
+              <AnimatePresence mode="wait">
                 {filteredRecords.map((rec, i) => (
                   <motion.tr
                     key={`${rec.employeeId}-${rec.courseName}`}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ delay: i * 0.02 }}
+                    transition={{ delay: i * 0.02, duration: 0.2 }}
                     className="border-b border-surface-100 dark:border-surface-800 hover:bg-surface-50 dark:hover:bg-surface-800/20"
                   >
                     <td className="px-6 py-4">
@@ -158,9 +182,9 @@ export default function CourseCompliancePage() {
                     <td className="px-6 py-4 text-xs font-medium text-surface-900 dark:text-white">{rec.courseName}</td>
                     <td className="px-6 py-4">
                       <p className="text-xs text-surface-600 dark:text-surface-300 font-medium">{rec.dueDate}</p>
-                      {activeTab === 'Overdue' && (
-                        <p className="text-[10px] text-danger-500 font-bold">14 days late</p>
-                      )}
+                    </td>
+                    <td className="px-6 py-4 text-xs font-bold text-surface-700 dark:text-surface-300">
+                      {rec.score > 0 ? `${rec.score}%` : '—'}
                     </td>
                     <td className="px-6 py-4"><StatusBadge status={rec.status} /></td>
                     <td className="px-6 py-4">
@@ -194,8 +218,14 @@ export default function CourseCompliancePage() {
               <div className="w-16 h-16 rounded-2xl bg-surface-100 dark:bg-surface-800 flex items-center justify-center mx-auto mb-4">
                 <ShieldCheck className="w-8 h-8 text-surface-300" />
               </div>
-              <h3 className="text-base font-bold text-surface-900 dark:text-white">Perfect Compliance!</h3>
-              <p className="text-sm text-surface-500 max-w-xs mx-auto">All mandatory courses in this category have been addressed.</p>
+              <h3 className="text-base font-bold text-surface-900 dark:text-white">
+                {records.length === 0 ? 'No Compliance Data Yet' : 'No Records in This Category'}
+              </h3>
+              <p className="text-sm text-surface-500 max-w-xs mx-auto mt-1">
+                {records.length === 0
+                  ? 'Compliance records will appear once employees are assigned courses.'
+                  : `All mandatory courses in "${activeTab}" status have been addressed.`}
+              </p>
             </div>
           )}
         </div>
@@ -203,4 +233,3 @@ export default function CourseCompliancePage() {
     </div>
   );
 }
-

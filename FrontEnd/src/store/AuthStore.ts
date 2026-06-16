@@ -24,6 +24,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       email: data.email,
       role: data.role,
       linkedinUrl: data.linkedinUrl,
+      department: data.department,
     };
 
     localStorage.setItem("user", JSON.stringify(user));
@@ -73,6 +74,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         email: response.data.email,
         role: response.data.role,
         linkedinUrl: response.data.linkedinUrl,
+        department: response.data.department,
       };
       set({
         user,
@@ -94,6 +96,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             email: data.email,
             role: data.role,
             linkedinUrl: data.linkedinUrl,
+            department: data.department,
           };
           localStorage.setItem("user", JSON.stringify(user));
           localStorage.setItem("accessToken", data.accessToken);

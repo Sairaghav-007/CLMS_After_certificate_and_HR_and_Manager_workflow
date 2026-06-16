@@ -137,53 +137,61 @@ public class AuthService {
 
     public AuthResponse getMeFromToken(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Unauthorized");
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Unauthorized");
         }
         String token = authHeader.substring(7);
-        String email = jwtService.extractEmail(token);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        if (!jwtService.isValid(token, user)) {
-            throw new RuntimeException("Token invalid or expired");
+        try {
+            String email = jwtService.extractEmail(token);
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "User not found"));
+            if (!jwtService.isValid(token, user)) {
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Token invalid or expired");
+            }
+            return new AuthResponse(
+                    token,
+                    null,
+                    user.getId(),
+                    user.getFullName(),
+                    user.getEmail(),
+                    user.getRole(),
+                    user.getLinkedinUrl(),
+                    user.getDepartment()
+            );
+        } catch (Exception e) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Token invalid or expired", e);
         }
-        return new AuthResponse(
-                token,
-                null,
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getRole(),
-                user.getLinkedinUrl(),
-                user.getDepartment()
-        );
     }
 
     @Transactional
     public AuthResponse updateProfileFromToken(String authHeader, String fullName, String linkedinUrl) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Unauthorized");
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Unauthorized");
         }
         String token = authHeader.substring(7);
-        String email = jwtService.extractEmail(token);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        if (!jwtService.isValid(token, user)) {
-            throw new RuntimeException("Token invalid or expired");
+        try {
+            String email = jwtService.extractEmail(token);
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "User not found"));
+            if (!jwtService.isValid(token, user)) {
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Token invalid or expired");
+            }
+            if (fullName != null && !fullName.trim().isEmpty()) {
+                user.setFullName(fullName);
+            }
+            user.setLinkedinUrl(linkedinUrl);
+            User saved = userRepository.save(user);
+            return new AuthResponse(
+                    token,
+                    null,
+                    saved.getId(),
+                    saved.getFullName(),
+                    saved.getEmail(),
+                    saved.getRole(),
+                    saved.getLinkedinUrl(),
+                    saved.getDepartment()
+            );
+        } catch (Exception e) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Token invalid or expired", e);
         }
-        if (fullName != null && !fullName.trim().isEmpty()) {
-            user.setFullName(fullName);
-        }
-        user.setLinkedinUrl(linkedinUrl);
-        User saved = userRepository.save(user);
-        return new AuthResponse(
-                token,
-                null,
-                saved.getId(),
-                saved.getFullName(),
-                saved.getEmail(),
-                saved.getRole(),
-                saved.getLinkedinUrl(),
-                saved.getDepartment()
-        );
     }
 }

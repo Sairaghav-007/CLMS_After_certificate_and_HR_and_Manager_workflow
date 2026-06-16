@@ -7,6 +7,7 @@ public record EmployeeDashboardResponse(
         int dueCourses,
         int inProgressCourses,
         int upcomingCourses,
+        int certificatesEarned,
         List<String> chartLabels,
         List<Integer> chartValues
 ) {}

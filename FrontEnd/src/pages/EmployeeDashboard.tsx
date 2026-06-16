@@ -48,6 +48,7 @@ interface DashboardData {
   dueCourses: number;
   inProgressCourses: number;
   upcomingCourses: number;
+  certificatesEarned: number;
   chartLabels: string[];
   chartValues: number[];
 }
@@ -129,24 +130,22 @@ export function EmployeeDashboard() {
       .finally(() => setLoading(false));
   }, [setCourses]);
 
-  // Derived dashboard statistics from CourseStore (real-time progress updates)
+  // Dashboard statistics: primary numbers from dbData (refresh-safe),
+  // only assigned count and hours come from CourseStore (needs full course list)
   const dashboardStats = useMemo(() => {
     const total = courses.length;
-    const completed = courses.filter((c) => c.progress === 100).length;
-    const certs = courses.filter((c) => c.certificate).length;
     const hours = courses.reduce((acc, c) => acc + (c.progress / 100) * c.duration, 0);
     const pendingMandatory = courses.filter((c) => c.category === CourseCategory.MANDATORY && c.progress < 100).length;
-    const inProgress = courses.filter((c) => c.progress > 0 && c.progress < 100).length;
 
     return {
       assigned: total,
-      completed,
-      certificates: certs,
+      completed: dbData?.completedCourses ?? 0,
+      certificates: dbData?.certificatesEarned ?? 0,
       hoursLearned: parseFloat(hours.toFixed(1)),
       mandatoryPending: pendingMandatory,
-      inProgress,
+      inProgress: dbData?.inProgressCourses ?? 0,
     };
-  }, [courses]);
+  }, [courses, dbData]);
 
   // Chart Progress data derived from SpringBoot Dashboard payload
   const progressChartData = useMemo(() => {

@@ -272,7 +272,7 @@ export default function ReviewCourseDetail() {
                 <div className="space-y-2 mt-4 p-4 rounded-2xl bg-surface-50 dark:bg-surface-800/50 border border-surface-100 dark:border-surface-700">
                     <p className="text-[10px] text-surface-400 uppercase font-black tracking-widest text-center">Status</p>
                     <div className="font-black text-center text-primary-500 text-lg uppercase tracking-tight">
-                       {course.status === 'Ready To Publish' ? 'Manager OK' : course.status}
+                       {course.status === 'READY_TO_PUBLISH' ? 'Manager OK' : course.status}
                     </div>
                 </div>
              </div>

@@ -44,7 +44,6 @@ public class Course {
     @Builder.Default
     private int duration = 10; // in hours
     
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String thumbnail;
     private String department;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, MoreVertical,
@@ -33,6 +33,10 @@ export default function GroupsPage() {
   const [targetAvgScore, setTargetAvgScore] = useState(80);
   const [targetPassingScore, setTargetPassingScore] = useState(70);
 
+  // Real API data for wizard
+  const [availableCourses, setAvailableCourses] = useState<any[]>([]);
+  const [availableEmployees, setAvailableEmployees] = useState<any[]>([]);
+
   const fetchGroups = async () => {
     try {
       const res = await api.get('/manager/groups');
@@ -46,6 +50,9 @@ export default function GroupsPage() {
 
   useEffect(() => {
     fetchGroups();
+    // Fetch real courses and employees for wizard
+    api.get('/employee/courses').then(res => setAvailableCourses(res.data)).catch(() => {});
+    api.get('/manager/employees').then(res => setAvailableEmployees(res.data)).catch(() => {});
   }, []);
 
   const handleCreateGroup = async () => {
@@ -82,6 +89,52 @@ export default function GroupsPage() {
     setTargetAvgScore(80);
     setTargetPassingScore(70);
   };
+
+  const groupComplianceData = useMemo(() => {
+    if (!selectedGroup || !selectedGroup.employees || selectedGroup.employees.length === 0) return [];
+    let compliant = 0;
+    let inProgress = 0;
+    let nonCompliant = 0;
+
+    selectedGroup.employees.forEach((empId: string) => {
+      const emp = availableEmployees.find(e => String(e.id) === String(empId));
+      if (emp) {
+        if (emp.status === 'Compliant') {
+          if (emp.completedCourses === emp.assignedCourses) {
+            compliant++;
+          } else {
+            inProgress++;
+          }
+        } else if (emp.status === 'Non-Compliant') {
+          nonCompliant++;
+        } else {
+          inProgress++;
+        }
+      }
+    });
+
+    const data = [
+      { name: 'Compliant', v: compliant },
+      { name: 'In Progress', v: inProgress },
+      { name: 'Non-Compliant', v: nonCompliant },
+    ].filter(item => item.v > 0);
+
+    return data;
+  }, [selectedGroup, availableEmployees]);
+
+  const groupScoreAvg = useMemo(() => {
+    if (!selectedGroup || !selectedGroup.employees || selectedGroup.employees.length === 0) return 'N/A';
+    let totalScore = 0;
+    let count = 0;
+    selectedGroup.employees.forEach((empId: string) => {
+      const emp = availableEmployees.find(e => String(e.id) === String(empId));
+      if (emp && emp.averageQuizScore !== undefined && emp.averageQuizScore > 0) {
+        totalScore += emp.averageQuizScore;
+        count++;
+      }
+    });
+    return count > 0 ? `${Math.round(totalScore / count)}%` : 'N/A';
+  }, [selectedGroup, availableEmployees]);
 
   if (loading) {
     return (
@@ -230,8 +283,10 @@ export default function GroupsPage() {
                    <span className="text-[10px] font-bold bg-primary-50 text-primary-600 px-2 py-0.5 rounded-md">{newGroupCourses.length} Selected</span>
                  </div>
                  <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                    {['React Mastery', 'Cloud Architecture', 'Cybersecurity Essentials', 'Modern DevOps', 'AI Foundations'].map((c, idx) => {
-                      const isSelected = newGroupCourses.some(x => x.courseName === c);
+                    {availableCourses.length === 0 ? (
+                      <p className="text-xs text-surface-400 text-center py-6">Loading courses…</p>
+                    ) : availableCourses.map((c: any, idx: number) => {
+                      const isSelected = newGroupCourses.some(x => x.courseName === c.title);
                       return (
                         <div 
                           key={idx} 
@@ -240,13 +295,13 @@ export default function GroupsPage() {
                           }`}
                           onClick={() => {
                             if (isSelected) {
-                              setNewGroupCourses(prev => prev.filter(x => x.courseName !== c));
+                              setNewGroupCourses(prev => prev.filter(x => x.courseName !== c.title));
                             } else {
-                              setNewGroupCourses(prev => [...prev, { courseId: `c-${idx}`, courseName: c, passingScore: targetPassingScore, dueDate: '2026-12-31', category: 'General', type: 'Mandatory' }]);
+                              setNewGroupCourses(prev => [...prev, { courseId: String(c.id), courseName: c.title, passingScore: targetPassingScore, dueDate: c.dueDate ?? '2026-12-31', category: c.category ?? 'General', type: 'Mandatory' }]);
                             }
                           }}
                         >
-                           <p className="text-xs font-bold text-black">{c}</p>
+                           <p className="text-xs font-bold text-black">{c.title}</p>
                            {isSelected && <CheckCircle2 className="w-4 h-4 text-primary-500" />}
                         </div>
                       );
@@ -262,23 +317,20 @@ export default function GroupsPage() {
                    <span className="text-[10px] font-bold bg-primary-50 text-primary-600 px-2 py-0.5 rounded-md">{newGroupEmployees.length} Enrolled</span>
                  </div>
                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                    {[
-                      { id: '1001', name: 'John Doe', department: 'Engineering' },
-                      { id: '1002', name: 'Alice Johnson', department: 'Engineering' },
-                      { id: '1003', name: 'Bob Smith', department: 'Engineering' },
-                      { id: '1004', name: 'Charlie Brown', department: 'Engineering' }
-                    ].map((emp) => (
+                    {availableEmployees.length === 0 ? (
+                      <p className="text-xs text-surface-400 text-center py-6">Loading employees…</p>
+                    ) : availableEmployees.map((emp: any) => (
                       <div 
                         key={emp.id} 
-                        onClick={() => setNewGroupEmployees(prev => prev.includes(emp.id) ? prev.filter(x => x !== emp.id) : [...prev, emp.id])}
+                        onClick={() => setNewGroupEmployees(prev => prev.includes(String(emp.id)) ? prev.filter(x => x !== String(emp.id)) : [...prev, String(emp.id)])}
                         className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                          newGroupEmployees.includes(emp.id) ? 'bg-primary-50 border-primary-200' : 'bg-white border-surface-100 hover:border-surface-300'
+                          newGroupEmployees.includes(String(emp.id)) ? 'bg-primary-50 border-primary-200' : 'bg-white border-surface-100 hover:border-surface-300'
                         }`}
                       >
                          <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                           newGroupEmployees.includes(emp.id) ? 'bg-primary-500 border-primary-500' : 'bg-white border-surface-300'
+                           newGroupEmployees.includes(String(emp.id)) ? 'bg-primary-500 border-primary-500' : 'bg-white border-surface-300'
                          }`}>
-                           {newGroupEmployees.includes(emp.id) && <CheckCircle2 className="w-3 h-3 text-white" />}
+                           {newGroupEmployees.includes(String(emp.id)) && <CheckCircle2 className="w-3 h-3 text-white" />}
                          </div>
                          <div className="flex-1 min-w-0">
                            <div className="text-xs font-bold text-black truncate">{emp.name}</div>
@@ -312,7 +364,7 @@ export default function GroupsPage() {
                 {[
                   { label: 'Employees', value: selectedGroup.employees ? selectedGroup.employees.length : 0, icon: Users, color: 'text-primary-500' },
                   { label: 'Courses', value: selectedGroup.courses ? selectedGroup.courses.length : 0, icon: BookOpen, color: 'text-success-500' },
-                  { label: 'Score Avg', value: '82%', icon: BarChart3, color: 'text-warning-500' },
+                  { label: 'Score Avg', value: groupScoreAvg, icon: BarChart3, color: 'text-warning-500' },
                   { label: 'Status', value: selectedGroup.status, icon: ShieldCheck, color: 'text-indigo-500' },
                 ].map(stat => (
                   <div key={stat.label} className="p-4 rounded-2xl bg-surface-50 border border-surface-100">
@@ -327,25 +379,29 @@ export default function GroupsPage() {
                 <div className="bg-white border border-surface-250 shadow-sm rounded-2xl p-6">
                    <h4 className="text-sm font-bold text-surface-900 mb-6">Compliance</h4>
                    <div className="h-48">
-                     <ResponsiveContainer width="100%" height="100%">
-                       <PieChart>
-                          <Pie data={[{ name: 'Compliant', v: 70 }, { name: 'In Progress', v: 20 }, { name: 'Non-Compliant', v: 10 }]} innerRadius={50} outerRadius={70} dataKey="v">
-                             <Cell fill="#22c55e" /><Cell fill="#6366f1" /><Cell fill="#ef4444" />
-                          </Pie>
-                          <Tooltip />
-                       </PieChart>
-                     </ResponsiveContainer>
+                      {groupComplianceData.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-surface-400">
+                          <Users className="w-8 h-8 text-surface-300 mb-2" />
+                          <p className="text-xs font-semibold">No data available yet</p>
+                        </div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                             <Pie data={groupComplianceData} innerRadius={50} outerRadius={70} dataKey="v">
+                                <Cell fill="#22c55e" /><Cell fill="#6366f1" /><Cell fill="#ef4444" />
+                             </Pie>
+                             <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      )}
                    </div>
                 </div>
-                <div className="bg-white border border-surface-250 shadow-sm rounded-2xl p-6">
-                   <h4 className="text-sm font-bold text-surface-900 mb-6">Quiz Scores</h4>
-                   <div className="h-48">
-                     <ResponsiveContainer width="100%" height="100%">
-                       <BarChart data={[{ s: 'Topic A', v: 85 }, { s: 'Topic B', v: 78 }, { s: 'Topic C', v: 92 }]}>
-                          <XAxis dataKey="s" />
-                          <Bar dataKey="v" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                       </BarChart>
-                     </ResponsiveContainer>
+                <div className="bg-white border border-surface-250 shadow-sm rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+                   <h4 className="text-sm font-bold text-surface-900 mb-6 w-full text-left">Quiz Scores</h4>
+                   <div className="h-48 flex flex-col items-center justify-center text-surface-400">
+                     <BarChart3 className="w-8 h-8 text-surface-300 mb-2" />
+                     <p className="text-xs font-semibold">No data available yet</p>
+                     <p className="text-[10px] mt-1">Cohort-specific topic scores will display here.</p>
                    </div>
                 </div>
              </div>

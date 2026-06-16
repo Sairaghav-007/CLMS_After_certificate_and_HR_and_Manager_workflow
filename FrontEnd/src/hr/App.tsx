@@ -25,7 +25,7 @@ function App() {
     const checkScheduled = () => {
       const now = new Date();
       courses.forEach((course: Course) => {
-        if (course.status === 'Scheduled' && course.scheduledAt) {
+        if (course.status === 'READY_TO_PUBLISH' && course.scheduledAt) {
           const scheduledTime = new Date(course.scheduledAt);
           if (now >= scheduledTime) {
             publishCourse(course.id);

@@ -21,7 +21,10 @@ public class AdminCourseController {
     public static class CourseDto {
         public String id;
         public String title;
+        public String description;
         public String category; // "Mandatory", "Departmental", "Elective"
+        public String status;   // "DRAFT", "PENDING_REVIEW", "REJECTED", "PUBLISHED", "ARCHIVED"
+        public String createdBy;
         public int duration; // in hours
 
         public CourseDto() {}
@@ -29,7 +32,10 @@ public class AdminCourseController {
         public CourseDto(Course course) {
             this.id = String.valueOf(course.getId());
             this.title = course.getTitle();
-            this.duration = 10; // default duration
+            this.description = course.getDescription() != null ? course.getDescription() : "";
+            this.duration = course.getDuration() > 0 ? course.getDuration() : 10;
+            this.status = course.getStatus() != null ? course.getStatus() : "DRAFT";
+            this.createdBy = course.getCreatedBy() != null ? course.getCreatedBy() : "HR";
 
             // Map DB category string to UI category
             if ("Department-Oriented".equalsIgnoreCase(course.getCategory()) || "Departmental".equalsIgnoreCase(course.getCategory())) {

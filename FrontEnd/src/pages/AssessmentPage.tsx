@@ -55,7 +55,9 @@ export function AssessmentPage() {
   // Fetch from API on refresh or if questions are empty
   useEffect(() => {
     if (!courseId) return;
-    if (course && course.assessment && course.assessment.questions && course.assessment.questions.length > 0) return;
+    const currentCourse = useCourseStore.getState().courses.find(c => c.id === courseId);
+    if (currentCourse?.assessment?.questions && currentCourse.assessment.questions.length > 0) return;
+    
     api.get(`/employee/courses/${courseId}`)
       .then((res) => {
         const data = res.data;
@@ -92,7 +94,7 @@ export function AssessmentPage() {
             courseId: String(data.id),
             timeLimit: data.assessment?.timeLimit || 15,
             passingPercentage: data.assessment?.passingPercentage || 80,
-            maxAttempts: data.maxAttempts || 3,
+            maxAttempts: data.assessment?.maxAttempts || 3,
             attemptsUsed: data.assessment?.attemptsUsed || 0,
             isLocked: false,
             isPassed: data.assessment?.isPassed || false,
@@ -112,7 +114,7 @@ export function AssessmentPage() {
         }));
       })
       .catch((err) => console.error('Failed to load course for assessment:', err));
-  }, [courseId, course]);
+  }, [courseId]);
 
   // Verify completed syllabus locks before access
   useEffect(() => {
@@ -148,6 +150,16 @@ export function AssessmentPage() {
   const handleStart = () => {
     if (!assessment) return;
     
+    // Check if questions are configured
+    if (!assessment.questions || assessment.questions.length === 0) {
+      addToast({
+        title: 'Assessment Unavailable',
+        message: 'No questions have been configured for this assessment. Please contact your L&D administrator.',
+        type: 'error'
+      });
+      return;
+    }
+
     // Check attempt limits
     if (assessment.attemptsUsed >= assessment.maxAttempts && !assessment.isPassed) {
       addToast({

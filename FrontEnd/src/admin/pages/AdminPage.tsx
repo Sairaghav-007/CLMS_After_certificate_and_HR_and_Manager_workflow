@@ -48,7 +48,10 @@ interface LearningPath {
 interface CourseAssign {
   id: string;
   title: string;
+  description: string;
   category: 'Mandatory' | 'Departmental' | 'Elective';
+  status: string; // DRAFT, PENDING_REVIEW, REJECTED, PUBLISHED, ARCHIVED
+  createdBy: string;
   duration: number; // hours
 }
 
@@ -81,7 +84,6 @@ export function AdminPage() {
   // Modal Control States
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showPathModal, setShowPathModal] = useState(false);
-  const [showCourseModal, setShowCourseModal] = useState(false);
 
   // Edit target states
   const [editAccountTarget, setEditAccountTarget] = useState<Account | null>(null);
@@ -154,11 +156,6 @@ export function AdminPage() {
     department: 'Engineering',
   });
 
-  const [courseForm, setCourseForm] = useState({
-    title: '',
-    category: 'Mandatory' as CourseAssign['category'],
-    duration: 8,
-  });
 
   // --- ACCOUNT CRUD HANDLERS ---
   const handleOpenCreateAccount = () => {
@@ -691,8 +688,7 @@ export function AdminPage() {
               <p className="text-xs text-surface-400 mt-1 font-semibold">Structure courses under Mandatory, Departmental, or Elective modules.</p>
             </div>
             
-            <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
-              {/* Filter */}
+              {/* Category Filter only — no Create Course button */}
               <div className="flex bg-surface-100 p-1 border border-surface-200 rounded-xl text-xs font-bold">
                 {['All', 'Mandatory', 'Departmental', 'Elective'].map((cat) => (
                   <button
@@ -709,15 +705,6 @@ export function AdminPage() {
                   </button>
                 ))}
               </div>
-
-              <button
-                onClick={() => setShowCourseModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-accent-600 text-white rounded-xl font-bold text-xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
-              >
-                <Plus size={14} />
-                Create Course
-              </button>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -728,20 +715,33 @@ export function AdminPage() {
               </div>
             ) : filteredCourses.length === 0 ? (
               <div className="col-span-3 text-center text-surface-400 text-sm font-semibold py-12">
-                No courses found. Click "Create Course" to add one.
+                No courses found. HR creates courses via the HR Portal.
               </div>
             ) : filteredCourses.map((course) => (
               <div key={course.id} className="p-5 border border-surface-200 bg-surface-50/20 hover:bg-surface-50/50 rounded-2xl flex flex-col justify-between transition-all">
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
-                    <span className={cn(
-                      'text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider',
-                      course.category === 'Mandatory' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                      course.category === 'Departmental' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
-                      'bg-purple-50 text-purple-600 border border-purple-100'
-                    )}>
-                      {course.category}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={cn(
+                        'text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider',
+                        course.category === 'Mandatory' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                        course.category === 'Departmental' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                        'bg-purple-50 text-purple-600 border border-purple-100'
+                      )}>
+                        {course.category}
+                      </span>
+                      {/* Status Badge */}
+                      <span className={cn(
+                        'text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider',
+                        course.status === 'PUBLISHED' || course.status === 'READY_TO_PUBLISH' ? 'bg-success-50 text-success-700 border border-success-100' :
+                        course.status === 'PENDING_REVIEW' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                        course.status === 'REJECTED' ? 'bg-danger-50 text-danger-700 border border-danger-100' :
+                        course.status === 'ARCHIVED' ? 'bg-slate-100 text-slate-600 border border-slate-200' :
+                        'bg-surface-100 text-surface-500 border border-surface-200'
+                      )}>
+                        {course.status ?? 'DRAFT'}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-surface-400">ID: {course.id}</span>
                       <button 
@@ -754,6 +754,12 @@ export function AdminPage() {
                     </div>
                   </div>
                   <h4 className="font-bold text-surface-900 leading-snug line-clamp-2">{course.title}</h4>
+                  {course.description && (
+                    <p className="text-[11px] text-surface-500 line-clamp-2">{course.description}</p>
+                  )}
+                  {course.createdBy && (
+                    <p className="text-[10px] text-surface-400 font-semibold">By: {course.createdBy}</p>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between border-t border-surface-100 pt-4 mt-6 text-xs font-semibold text-surface-500">
@@ -995,81 +1001,6 @@ export function AdminPage() {
         )}
       </AnimatePresence>
 
-      {/* --- CREATE COURSE MODAL --- */}
-      <AnimatePresence>
-        {showCourseModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl border border-surface-200 shadow-2xl max-w-md w-full overflow-hidden"
-            >
-              <div className="px-6 py-5 border-b border-surface-100 flex items-center justify-between">
-                <h4 className="text-lg font-black text-surface-900 flex items-center gap-2">
-                  <Plus size={18} className="text-accent-600" />
-                  Create New Course
-                </h4>
-                <button 
-                  onClick={() => setShowCourseModal(false)}
-                  className="p-1 rounded-lg hover:bg-surface-50 text-surface-400"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateCourse} className="p-6 space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-surface-500 uppercase tracking-wider">Course Title</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. SOC-2 Compliance Training"
-                    value={courseForm.title}
-                    onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-surface-200 text-sm focus:ring-2 focus:ring-accent-500/20 focus:border-accent-400 focus:outline-none transition-all"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-surface-500 uppercase tracking-wider">Select Category</label>
-                    <select
-                      value={courseForm.category}
-                      onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value as any })}
-                      className="w-full px-4 py-3 rounded-xl border border-surface-200 text-sm focus:ring-2 focus:ring-accent-500/20 focus:border-accent-400 focus:outline-none transition-all"
-                    >
-                      <option value="Mandatory">Mandatory Course</option>
-                      <option value="Departmental">Departmental Course</option>
-                      <option value="Elective">Elective Course</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-surface-500 uppercase tracking-wider">Duration (Hrs)</label>
-                    <input
-                      type="number"
-                      required
-                      min={1}
-                      value={courseForm.duration}
-                      onChange={(e) => setCourseForm({ ...courseForm, duration: Number(e.target.value) })}
-                      className="w-full px-4 py-3 rounded-xl border border-surface-200 text-sm focus:ring-2 focus:ring-accent-500/20 focus:border-accent-400 focus:outline-none transition-all"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-accent-600 hover:bg-accent-500 text-white rounded-2xl font-bold text-sm shadow-xl shadow-accent-500/15 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer mt-4"
-                >
-                  <Plus size={16} />
-                  Create Course
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
     </div>
   );

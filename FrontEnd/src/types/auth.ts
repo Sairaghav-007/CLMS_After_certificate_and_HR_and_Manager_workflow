@@ -6,6 +6,7 @@ export interface AuthUser {
   email: string;
   role: Role;
   linkedinUrl?: string;
+  department?: string;
 }
 
 export interface AuthResponse extends AuthUser {

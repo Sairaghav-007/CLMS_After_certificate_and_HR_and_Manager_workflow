@@ -9,6 +9,7 @@ import { CoursePreviewPage } from "./pages/CoursePreviewPage";
 import { LearningPlayerPage } from "./pages/LearningPlayerPage";
 import { AssessmentPage } from "./pages/AssessmentPage";
 import { CertificatesPage } from "./pages/CertificatesPage";
+import { EmployeeLearningPathsPage } from "./pages/EmployeeLearningPathsPage";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { AppLayout } from "./shared/components/Layout";
 
@@ -84,6 +85,7 @@ export default function App() {
             <Route path="/employee" element={<EmployeeDashboard />} />
             <Route path="/employee/courses" element={<EmployeeCoursesPage />} />
             <Route path="/employee/courses/:courseId" element={<CoursePreviewPage />} />
+            <Route path="/employee/learning-paths" element={<EmployeeLearningPathsPage />} />
             <Route path="/employee/certificates" element={<CertificatesPage />} />
           </Route>
 

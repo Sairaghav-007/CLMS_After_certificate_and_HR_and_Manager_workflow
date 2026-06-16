@@ -123,9 +123,9 @@ function CourseCard({ course, index }: { course: Course; index: number }) {
           </div>
           <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden">
             <motion.div
-              initial={{ width: 0 }}
+              initial={false}
               animate={{ width: `${course.progress}%` }}
-              transition={{ duration: 0.8, delay: 0.2 }}
+              transition={{ duration: 0.6 }}
               className={cn(
                 'h-full rounded-full',
                 course.progress >= 100

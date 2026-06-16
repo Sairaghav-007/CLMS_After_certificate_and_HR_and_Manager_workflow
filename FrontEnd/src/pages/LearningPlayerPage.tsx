@@ -76,6 +76,7 @@ export function LearningPlayerPage() {
                 url: s.materialUrl,
                 isCompleted: s.isCompleted !== undefined ? s.isCompleted : (existingR?.isCompleted || false),
                 progress: s.progress !== undefined ? s.progress : (existingR?.progress || 0),
+                totalPages: s.totalPages,
               };
             });
             const completedCount = resources.filter((r: any) => r.isCompleted).length;
