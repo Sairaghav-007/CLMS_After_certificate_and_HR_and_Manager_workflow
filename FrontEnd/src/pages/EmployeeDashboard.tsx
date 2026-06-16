@@ -84,7 +84,7 @@ export function EmployeeDashboard() {
           id: String(bc.id),
           title: bc.title,
           description: bc.description,
-          thumbnail: "",
+          thumbnail: bc.thumbnail || "",
           category: mappedCategory,
           instructor: existing?.instructor || {
             id: "INS-DEFAULT",

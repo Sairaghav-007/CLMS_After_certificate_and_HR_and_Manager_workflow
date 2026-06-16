@@ -72,10 +72,10 @@ export function LearningPlayerPage() {
                 id: String(s.id),
                 type: typeMap[s.materialType] || 'reading',
                 title: s.title,
-                duration: 25,
+                duration: s.duration ? Math.round(s.duration / 60) : 1, // convert seconds to minutes
                 url: s.materialUrl,
-                isCompleted: existingR?.isCompleted || false,
-                progress: existingR?.progress || 0,
+                isCompleted: s.isCompleted !== undefined ? s.isCompleted : (existingR?.isCompleted || false),
+                progress: s.progress !== undefined ? s.progress : (existingR?.progress || 0),
               };
             });
             const completedCount = resources.filter((r: any) => r.isCompleted).length;
@@ -104,7 +104,7 @@ export function LearningPlayerPage() {
             id: String(res.data.id),
             title: res.data.title,
             description: res.data.description,
-            thumbnail: "",
+            thumbnail: res.data.thumbnail || "",
             category: categoryMap[res.data.category?.toUpperCase()] || CourseCategory.ELECTIVE,
             instructor: {
               id: "INS-DEFAULT",
@@ -137,18 +137,25 @@ export function LearningPlayerPage() {
               id: `AST-${res.data.id}`,
               title: `${res.data.title} Final Quiz`,
               courseId: String(res.data.id),
-              timeLimit: 15,
-              passingPercentage: 80,
-              maxAttempts: 3,
-              attemptsUsed: localCourse?.assessment?.attemptsUsed || 0,
+              timeLimit: res.data.assessment?.timeLimit || 15,
+              passingPercentage: res.data.assessment?.passingPercentage || 80,
+              maxAttempts: res.data.maxAttempts || 3,
+              attemptsUsed: res.data.assessment?.attemptsUsed || 0,
               isLocked: !isAllCompleted,
-              isPassed: localCourse?.assessment?.isPassed || false,
+              isPassed: res.data.assessment?.isPassed || false,
               shuffleQuestions: false,
               shuffleOptions: false,
               negativeMarking: false,
               negativeMarkValue: 0,
-              questions: [],
-              lastScore: localCourse?.assessment?.lastScore,
+              questions: (res.data.assessment?.questions || []).map((q: any) => ({
+                id: String(q.id),
+                type: q.type || 'mcq',
+                text: q.text,
+                options: q.options || [],
+                correctAnswers: q.correctAnswers || [],
+                points: q.points || 5,
+              })),
+              lastScore: res.data.assessment?.lastScore,
             },
             certificate: localCourse?.certificate,
             popularity: 85,
@@ -157,7 +164,20 @@ export function LearningPlayerPage() {
 
           useCourseStore.setState((state) => ({
             courses: state.courses.map((c) => c.id === mappedCourse.id ? mappedCourse : c)
+              .concat(state.courses.some(c => c.id === mappedCourse.id) ? [] : [mappedCourse as any])
           }));
+
+          // After loading, if current URL module/section not found, redirect to first valid section
+          const loadedModules = mappedModules;
+          if (loadedModules.length > 0) {
+            const targetModule = loadedModules.find((m: any) => m.id === moduleId) || loadedModules[0];
+            const targetResource = targetModule.resources.find((r: any) => r.id === resourceId) || targetModule.resources[0];
+            if (targetModule && targetResource) {
+              if (targetModule.id !== moduleId || targetResource.id !== resourceId) {
+                navigate(`/employee/courses/${courseId}/learn/${targetModule.id}/${targetResource.id}`, { replace: true });
+              }
+            }
+          }
         })
         .finally(() => setLoadingDetail(false));
     }

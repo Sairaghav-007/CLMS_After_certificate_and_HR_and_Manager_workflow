@@ -31,6 +31,7 @@ import NudgeEmployeesPage from "./manager/pages/NudgeEmployeesPage";
 import TeamCompletionPage from "./manager/pages/TeamCompletionPage";
 import CourseCompliancePage from "./manager/pages/CourseCompliancePage";
 import ReviewCoursesPage from "./manager/pages/ReviewCoursesPage";
+import ManagerCourseReviewPage from "./manager/pages/ManagerCourseReviewPage";
 import ReportsPage from "./manager/pages/ReportsPage";
 import TrendProgressPage from "./manager/pages/TrendProgressPage";
 import GroupsPage from "./manager/pages/GroupsPage";
@@ -153,6 +154,16 @@ export default function App() {
             <Route path="/manager/notifications" element={<NotificationsPage />} />
             <Route path="/manager/settings" element={<SettingsPage />} />
           </Route>
+
+          {/* Standalone Manager Course Review — full viewport, no sidebar */}
+          <Route
+            path="/manager/review-courses/:courseId"
+            element={
+              <ProtectedRoute allowedRoles={["MANAGER"]}>
+                <ManagerCourseReviewPage />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

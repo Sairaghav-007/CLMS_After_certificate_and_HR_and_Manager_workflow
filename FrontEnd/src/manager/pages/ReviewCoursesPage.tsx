@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, CheckCircle2, XCircle, Clock, AlertCircle, 
   FileText, Play, FileDigit, Settings,
-  ThumbsUp, MessageSquare, Send
+  ThumbsUp, MessageSquare, Send, Eye
 } from 'lucide-react';
 import { PageHeader, StatusBadge, Tabs, Modal, ProgressBar } from '../components/ui';
 import { api } from '@/api/client';
@@ -13,6 +14,7 @@ type ReviewStatus = 'Submitted' | 'On Review' | 'Need Changes' | 'Ready To Publi
 type ReviewPriority = 'Low' | 'Medium' | 'High';
 
 export default function ReviewCoursesPage() {
+  const navigate = useNavigate();
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ReviewStatus>('Submitted');
@@ -144,7 +146,7 @@ export default function ReviewCoursesPage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-white border border-surface-200 shadow-sm rounded-2xl p-5 hover:shadow-xl transition-shadow cursor-pointer"
+              className="bg-white border border-surface-200 shadow-sm rounded-2xl p-5 hover:shadow-xl transition-shadow"
               onClick={() => setSelectedReview(review)}
             >
               <div className="flex items-start justify-between mb-4">
@@ -173,9 +175,16 @@ export default function ReviewCoursesPage() {
                     <FileText className="w-3 h-3" /> {review.pdfs}
                   </div>
                 </div>
-                <div className="text-[10px] text-surface-400 font-medium italic">
-                  Submitted {review.submittedDate}
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/manager/review-courses/${review.courseId}`);
+                  }}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-50 text-primary-600 border border-primary-200/60 text-[10px] font-black uppercase tracking-wider hover:bg-primary-100 transition-all"
+                >
+                  <Eye className="w-3 h-3" />
+                  Review Content
+                </button>
               </div>
             </motion.div>
           ))}

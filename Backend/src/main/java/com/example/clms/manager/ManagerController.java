@@ -62,6 +62,9 @@ public class ManagerController {
     @Autowired
     private CertificateRepository certificateRepository;
 
+    @Autowired
+    private QuestionRepository questionRepository;
+
     // SSE Registration Endpoint
     @GetMapping(value = "/dashboard/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamEvents() {
@@ -240,6 +243,77 @@ public class ManagerController {
         res.put("nonCompliant", nonCompliant);
 
         return ResponseEntity.ok(res);
+    }
+
+    // Get Full Course Detail for Manager Review
+    @GetMapping("/course-detail/{id}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<Map<String, Object>> getCourseDetail(@PathVariable("id") Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found: " + courseId));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", String.valueOf(course.getId()));
+        result.put("title", course.getTitle());
+        result.put("description", course.getDescription() != null ? course.getDescription() : "");
+        result.put("category", course.getCategory() != null ? course.getCategory() : "Mandatory");
+        result.put("status", course.getStatus() != null ? course.getStatus() : "DRAFT");
+        result.put("createdBy", course.getCreatedBy() != null ? course.getCreatedBy() : "HR");
+        result.put("thumbnail", course.getThumbnail() != null ? course.getThumbnail() : "");
+        result.put("passingScore", course.getPassingScore());
+        result.put("maxAttempts", course.getMaxAttempts());
+        result.put("duration", course.getDuration());
+        result.put("department", course.getDepartment() != null ? course.getDepartment() : "");
+        result.put("dueDate", course.getDueDate() != null ? course.getDueDate().toString() : "");
+
+        // Questions
+        List<Question> questions = questionRepository.findByCourseId(courseId);
+        List<Map<String, Object>> questionList = new ArrayList<>();
+        for (Question q : questions) {
+            Map<String, Object> qMap = new HashMap<>();
+            qMap.put("id", String.valueOf(q.getId()));
+            qMap.put("question", q.getQuestion());
+            qMap.put("optionA", q.getOptionA());
+            qMap.put("optionB", q.getOptionB());
+            qMap.put("optionC", q.getOptionC() != null ? q.getOptionC() : "");
+            qMap.put("optionD", q.getOptionD() != null ? q.getOptionD() : "");
+            qMap.put("correctAnswer", q.getCorrectAnswer());
+            questionList.add(qMap);
+        }
+        result.put("questions", questionList);
+
+        // Modules + Sections
+        List<Map<String, Object>> moduleList = new ArrayList<>();
+        if (course.getModules() != null) {
+            List<CourseModule> sortedModules = new ArrayList<>(course.getModules());
+            sortedModules.sort(Comparator.comparing(CourseModule::getModuleOrder, Comparator.nullsLast(Integer::compareTo)));
+            for (CourseModule mod : sortedModules) {
+                Map<String, Object> modMap = new HashMap<>();
+                modMap.put("id", String.valueOf(mod.getId()));
+                modMap.put("title", mod.getTitle());
+                modMap.put("order", mod.getModuleOrder());
+                List<Map<String, Object>> sectionList = new ArrayList<>();
+                if (mod.getSections() != null) {
+                    List<CourseSection> sortedSections = new ArrayList<>(mod.getSections());
+                    sortedSections.sort(Comparator.comparing(CourseSection::getSectionOrder, Comparator.nullsLast(Integer::compareTo)));
+                    for (CourseSection sec : sortedSections) {
+                        Map<String, Object> secMap = new HashMap<>();
+                        secMap.put("id", String.valueOf(sec.getId()));
+                        secMap.put("title", sec.getTitle());
+                        secMap.put("materialType", sec.getMaterialType() != null ? sec.getMaterialType().name() : "DOCUMENT");
+                        secMap.put("materialUrl", sec.getMaterialUrl() != null ? sec.getMaterialUrl() : "");
+                        secMap.put("sectionOrder", sec.getSectionOrder());
+                        secMap.put("duration", sec.getDuration() != null ? sec.getDuration() : 0);
+                        sectionList.add(secMap);
+                    }
+                }
+                modMap.put("sections", sectionList);
+                moduleList.add(modMap);
+            }
+        }
+        result.put("modules", moduleList);
+
+        return ResponseEntity.ok(result);
     }
 
     // List Courses Awaiting Review

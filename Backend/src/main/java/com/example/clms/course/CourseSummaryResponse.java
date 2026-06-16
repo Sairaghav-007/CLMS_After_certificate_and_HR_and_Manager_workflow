@@ -9,5 +9,6 @@ public record CourseSummaryResponse(
         String description,
         LocalDate dueDate,
         int progress,
-        String status
+        String status,
+        String thumbnail
 ) {}

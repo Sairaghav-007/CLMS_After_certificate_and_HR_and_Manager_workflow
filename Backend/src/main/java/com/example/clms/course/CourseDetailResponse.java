@@ -69,6 +69,7 @@ public record CourseDetailResponse(
             String materialUrl,
             Integer sectionOrder,
             int progress,
-            boolean isCompleted
+            boolean isCompleted,
+            Integer duration
     ) {}
 }

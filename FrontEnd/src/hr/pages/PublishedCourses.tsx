@@ -17,9 +17,11 @@ export default function PublishedCourses() {
   const isDark = theme === 'dark';
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchCourses();
+    setLoading(true);
+    fetchCourses().finally(() => setLoading(false));
   }, [fetchCourses]);
 
   // Filter: ALL Published courses
@@ -29,6 +31,15 @@ export default function PublishedCourses() {
       c.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [courses, searchQuery]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+        <span className="ml-3 font-semibold text-surface-500">Loading catalog...</span>
+      </div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 pb-10">

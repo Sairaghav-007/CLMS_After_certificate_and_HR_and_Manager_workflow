@@ -18,7 +18,8 @@ import {
 import { useCourseStore, useUIStore, useQuizStore, useAuthStore } from '@/shared/store';
 import { useTimer, useContentProtection } from '@/shared/hooks';
 import { cn } from '@/shared/utils';
-import { QuestionType } from '@/shared/types';
+import { QuestionType, CourseCategory, CompletionStatus } from '@/shared/types';
+import { api } from '../api/client';
 
 export function AssessmentPage() {
   const { courseId } = useParams<{ courseId: string }>();
@@ -50,6 +51,68 @@ export function AssessmentPage() {
   // Retrieve course from cache
   const course = useMemo(() => courses.find(c => c.id === courseId), [courses, courseId]);
   const assessment = course?.assessment;
+
+  // Fetch from API on refresh or if questions are empty
+  useEffect(() => {
+    if (!courseId) return;
+    if (course && course.assessment && course.assessment.questions && course.assessment.questions.length > 0) return;
+    api.get(`/employee/courses/${courseId}`)
+      .then((res) => {
+        const data = res.data;
+        const categoryMap: Record<string, CourseCategory> = {
+          MANDATORY: CourseCategory.MANDATORY, COMPLIANCE: CourseCategory.MANDATORY,
+          TECHNICAL: CourseCategory.ELECTIVE,  ELECTIVE: CourseCategory.ELECTIVE,
+          HR: CourseCategory.DEPARTMENT,       'DEPARTMENT-ORIENTED': CourseCategory.DEPARTMENT,
+        };
+        const questionResponses = (data.assessment?.questions || []).map((q: any) => ({
+          id: String(q.id), type: q.type || 'mcq', text: q.text,
+          options: q.options || [], correctAnswers: q.correctAnswers || [], points: q.points || 5,
+        }));
+        const mappedCourse = {
+          id: String(data.id),
+          title: data.title,
+          description: data.description || '',
+          thumbnail: data.thumbnail || '',
+          category: categoryMap[data.category?.toUpperCase()?.replace(/ /g, '-')] || CourseCategory.ELECTIVE,
+          instructor: { id: 'INS-DEFAULT', name: 'Corporate Trainer', title: 'L&D Trainer', avatar: '', bio: '' },
+          duration: 3,
+          totalModules: (data.modules || []).length,
+          totalAssessments: 1,
+          progress: data.progress || 100, // on assessment page assume content complete
+          status: CompletionStatus.COMPLETED,
+          dueDate: data.dueDate || '',
+          assignedDate: '', lastUpdated: '',
+          objectives: [], learningOutcomes: [],
+          completionCriteria: 'Complete all sections and score 80% on final quiz.',
+          passingPercentage: 80,
+          modules: [],
+          assessment: {
+            id: `AST-${data.id}`,
+            title: `${data.title} Final Quiz`,
+            courseId: String(data.id),
+            timeLimit: data.assessment?.timeLimit || 15,
+            passingPercentage: data.assessment?.passingPercentage || 80,
+            maxAttempts: data.maxAttempts || 3,
+            attemptsUsed: data.assessment?.attemptsUsed || 0,
+            isLocked: false,
+            isPassed: data.assessment?.isPassed || false,
+            shuffleQuestions: false, shuffleOptions: false,
+            negativeMarking: false, negativeMarkValue: 0,
+            questions: questionResponses,
+            lastScore: data.assessment?.lastScore,
+          },
+          certificate: undefined,
+          popularity: 85,
+          department: data.department || '',
+        };
+        useCourseStore.setState((state) => ({
+          courses: state.courses.some(c => c.id === mappedCourse.id)
+            ? state.courses.map(c => c.id === mappedCourse.id ? mappedCourse : c)
+            : [...state.courses, mappedCourse]
+        }));
+      })
+      .catch((err) => console.error('Failed to load course for assessment:', err));
+  }, [courseId, course]);
 
   // Verify completed syllabus locks before access
   useEffect(() => {

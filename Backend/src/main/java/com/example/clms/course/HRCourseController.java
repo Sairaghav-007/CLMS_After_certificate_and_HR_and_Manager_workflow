@@ -198,6 +198,7 @@ public class HRCourseController {
                     .passingScore(req.passingScore > 0 ? req.passingScore : 70)
                     .maxAttempts(req.maxAttempts > 0 ? req.maxAttempts : 3)
                     .duration(req.duration > 0 ? req.duration : 10)
+                    .thumbnail(req.thumbnail)
                     .department(req.department != null ? req.department : "Engineering")
                     .modules(new ArrayList<>())
                     .build();
@@ -212,6 +213,9 @@ public class HRCourseController {
             course.setMaxAttempts(req.maxAttempts > 0 ? req.maxAttempts : course.getMaxAttempts());
             course.setDuration(req.duration > 0 ? req.duration : course.getDuration());
             course.setDepartment(req.department != null ? req.department : course.getDepartment());
+            if (req.thumbnail != null && !req.thumbnail.isBlank()) {
+                course.setThumbnail(req.thumbnail);
+            }
         }
 
         // Save course to generate ID
@@ -264,6 +268,7 @@ public class HRCourseController {
                                 .materialType(matType)
                                 .materialUrl(matUrl)
                                 .sectionOrder(sIdx + 1)
+                                .duration(sessReq.duration > 0 ? sessReq.duration : 0)
                                 .build();
 
                         sections.add(section);
@@ -393,11 +398,13 @@ public class HRCourseController {
                                     else if (sec.getMaterialType() == MaterialType.PPT) typeStr = "PPT";
                                     
                                     secMap.put("type", typeStr);
-                                    secMap.put("duration", 120); // Default duration in seconds
+                                    secMap.put("duration", sec.getDuration() != null ? sec.getDuration() : 0);
                                     secMap.put("order", sec.getSectionOrder());
-                                    secMap.put("videoUrl", sec.getMaterialUrl());
-                                    secMap.put("pdfUrl", sec.getMaterialUrl());
-                                    secMap.put("pptUrl", sec.getMaterialUrl());
+                                    // Set only the appropriate URL field based on material type
+                                    String url = sec.getMaterialUrl() != null ? sec.getMaterialUrl() : "";
+                                    secMap.put("videoUrl", sec.getMaterialType() == MaterialType.VIDEO ? url : null);
+                                    secMap.put("pdfUrl",   sec.getMaterialType() == MaterialType.PDF   ? url : null);
+                                    secMap.put("pptUrl",   sec.getMaterialType() == MaterialType.PPT   ? url : null);
                                     sessionList.add(secMap);
                                 }
                             }
@@ -574,6 +581,7 @@ public class HRCourseController {
         public int maxAttempts;
         public String department;
         public String status;
+        public String thumbnail;
         public List<ModuleSaveRequest> modules;
     }
 

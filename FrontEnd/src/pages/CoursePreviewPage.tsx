@@ -297,7 +297,7 @@ export function CoursePreviewPage() {
           id: String(res.data.id),
           title: res.data.title,
           description: res.data.description,
-          thumbnail: "",
+          thumbnail: res.data.thumbnail || "",
           category: mappedCategory,
           instructor: localCourse?.instructor || {
             id: "INS-DEFAULT",

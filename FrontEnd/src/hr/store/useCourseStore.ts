@@ -264,12 +264,19 @@ export const useCourseStore = create<CourseState>()(
             const updated = {
               ...base,
               status: 'PUBLISHED' as CourseStatus,
+              publishedAt: ts(),
             };
+            // Optimistic local update — immediately visible in Published Courses page
+            set((state) => ({
+              courses: state.courses.map((c) => c.id === courseId ? updated : c)
+            }));
             await api.post('/hr/courses', updated);
-            await s.fetchCourses();
+            await s.fetchCourses(); // sync with server state
           }
         } catch (error) {
           console.error("Failed to publish course:", error);
+          // Rollback on error
+          await get().fetchCourses();
         }
       },
 

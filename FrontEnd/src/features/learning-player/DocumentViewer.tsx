@@ -99,30 +99,40 @@ export function DocumentViewer({ type, url: _url, totalPages = 10, onPageChange,
             minHeight: '600px'
           }}
         >
-          {/* Mock Content */}
-          <div className="p-12 space-y-8 pointer-events-none select-none text-left">
-            <div className="h-6 w-3/4 bg-surface-200/50 rounded-lg mb-6" />
-            <div className="space-y-3">
-              <div className="h-3.5 w-full bg-surface-100 rounded" />
-              <div className="h-3.5 w-full bg-surface-100 rounded" />
-              <div className="h-3.5 w-5/6 bg-surface-100 rounded" />
-              <div className="h-3.5 w-full bg-surface-100 rounded" />
-              <div className="h-3.5 w-2/3 bg-surface-100 rounded" />
+          {_url && _url.trim() !== '' ? (
+            <div className="flex-1 w-full h-full relative" style={{ pointerEvents: 'auto' }}>
+              <iframe
+                src={type === 'pdf' ? _url : `https://docs.google.com/gview?url=${encodeURIComponent(_url)}&embedded=true`}
+                className="w-full h-full border-none"
+                title="Document Viewer"
+              />
             </div>
-            
-            <div className="border border-surface-200/80 rounded-xl p-4 bg-surface-50/50 text-[11px] text-surface-400 mt-6 leading-relaxed">
-              <span>This document covers key learning material for the section. Take notes using the side note panel. Review the content thoroughly before continuing to the next slide.</span>
-            </div>
+          ) : (
+            /* Mock Content */
+            <div className="p-12 space-y-8 pointer-events-none select-none text-left">
+              <div className="h-6 w-3/4 bg-surface-200/50 rounded-lg mb-6" />
+              <div className="space-y-3">
+                <div className="h-3.5 w-full bg-surface-100 rounded" />
+                <div className="h-3.5 w-full bg-surface-100 rounded" />
+                <div className="h-3.5 w-5/6 bg-surface-100 rounded" />
+                <div className="h-3.5 w-full bg-surface-100 rounded" />
+                <div className="h-3.5 w-2/3 bg-surface-100 rounded" />
+              </div>
+              
+              <div className="border border-surface-200/80 rounded-xl p-4 bg-surface-50/50 text-[11px] text-surface-400 mt-6 leading-relaxed">
+                <span>This document covers key learning material for the section. Take notes using the side note panel. Review the content thoroughly before continuing to the next slide.</span>
+              </div>
 
-            <div className="grid grid-cols-2 gap-6 py-6">
-               <div className="aspect-video bg-primary-50 rounded-xl flex items-center justify-center border border-primary-100/50">
-                  <Eye className="text-primary-300 w-10 h-10" />
-               </div>
-               <div className="aspect-video bg-accent-50 rounded-xl flex items-center justify-center border border-accent-100/50">
-                  <Lock className="text-accent-300 w-10 h-10" />
-               </div>
+              <div className="grid grid-cols-2 gap-6 py-6">
+                 <div className="aspect-video bg-primary-50 rounded-xl flex items-center justify-center border border-primary-100/50">
+                    <Eye className="text-primary-300 w-10 h-10" />
+                 </div>
+                 <div className="aspect-video bg-accent-50 rounded-xl flex items-center justify-center border border-accent-100/50">
+                    <Lock className="text-accent-300 w-10 h-10" />
+                 </div>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="p-6 text-center text-xs text-surface-400 border-t border-surface-100/50 font-medium">
              Slide {currentPage} of {totalPages}

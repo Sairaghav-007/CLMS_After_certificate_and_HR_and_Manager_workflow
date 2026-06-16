@@ -26,7 +26,7 @@ import { api } from '../api/client';
 const categoryConfig = {
   [CourseCategory.MANDATORY]: { label: 'Mandatory', color: 'bg-danger-500/10 text-danger-600 border-danger-200' },
   [CourseCategory.ELECTIVE]: { label: 'Elective', color: 'bg-primary-500/10 text-primary-600 border-primary-200' },
-  [CourseCategory.DEPARTMENT]: { label: 'Department', color: 'bg-accent-500/10 text-accent-600 border-accent-200' },
+  [CourseCategory.DEPARTMENT]: { label: 'Department Assigned', color: 'bg-accent-500/10 text-accent-600 border-accent-200' },
 };
 
 const statusConfig = {
@@ -51,8 +51,16 @@ function CourseCard({ course, index }: { course: Course; index: number }) {
     >
       {/* Thumbnail */}
       <div className="relative h-40 bg-gradient-to-br from-surface-100 to-surface-200 overflow-hidden flex-shrink-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-600/80 via-accent-600/60 to-primary-800/80 flex items-center justify-center">
-          <BookOpen className="w-12 h-12 text-white/20" />
+        {course.thumbnail ? (
+          <img
+            src={course.thumbnail}
+            alt={course.title}
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        ) : null}
+        <div className={`absolute inset-0 flex items-center justify-center ${course.thumbnail ? 'bg-black/20' : 'bg-gradient-to-br from-primary-600/80 via-accent-600/60 to-primary-800/80'}`}>
+          {!course.thumbnail && <BookOpen className="w-12 h-12 text-white/20" />}
         </div>
         {/* Category Badge */}
         <div className="absolute top-3 left-3">
@@ -200,16 +208,18 @@ export function EmployeeCoursesPage() {
             TECHNICAL: CourseCategory.ELECTIVE,
             ELECTIVE: CourseCategory.ELECTIVE,
             HR: CourseCategory.DEPARTMENT,
+            'DEPARTMENT-ORIENTED': CourseCategory.DEPARTMENT,
+            DEPARTMENT: CourseCategory.DEPARTMENT,
           };
 
-          const mappedCategory = categoryMap[bc.category?.toUpperCase()] || CourseCategory.ELECTIVE;
+          const mappedCategory = categoryMap[bc.category?.toUpperCase().replace(/ /g, '-')] || CourseCategory.ELECTIVE;
           const duration = existing?.duration || 6;
 
           return {
             id: String(bc.id),
             title: bc.title,
             description: bc.description,
-            thumbnail: "",
+            thumbnail: bc.thumbnail || "",
             category: mappedCategory,
             instructor: existing?.instructor || {
               id: "INS-DEFAULT",

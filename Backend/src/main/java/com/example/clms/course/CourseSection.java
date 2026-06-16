@@ -26,6 +26,9 @@ public class CourseSection {
 
     private Integer sectionOrder;
 
+    @Builder.Default
+    private Integer duration = 0; // duration in seconds
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "module_id", nullable = false)
     private CourseModule module;

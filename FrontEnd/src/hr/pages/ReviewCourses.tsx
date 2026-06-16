@@ -12,6 +12,8 @@ import {
   Calendar,
   ArrowUpRight,
   ClipboardList,
+  Pencil,
+  RefreshCw,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { CourseStatus } from '@/hr/types/course';
@@ -148,15 +150,29 @@ export default function ReviewCourses() {
                    </div>
                  )}
 
-                <div className="flex items-center justify-between pt-4 border-t border-surface-100 dark:border-surface-800">
-                   <div className="flex items-center gap-2 text-surface-400">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span className="text-[11px] font-bold">{new Date(course.updatedAt).toLocaleDateString()}</span>
-                   </div>
-                   <button className={cn("p-2 rounded-xl transition-all", isDark ? "bg-surface-800 text-surface-400 group-hover:bg-primary-500 group-hover:text-white" : "bg-surface-50 text-surface-400 group-hover:bg-primary-600 group-hover:text-white shadow-sm")}>
-                      <ArrowUpRight className="w-4 h-4" />
-                   </button>
-                </div>
+                 <div className="flex items-center justify-between pt-4 border-t border-surface-100 dark:border-surface-800">
+                    <div className="flex items-center gap-2 text-surface-400">
+                       <Clock className="w-3.5 h-3.5" />
+                       <span className="text-[11px] font-bold">{new Date(course.updatedAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {course.status === 'REJECTED' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/hr/course-editor/${course.id}`);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          Edit &amp; Resubmit
+                        </button>
+                      )}
+                      <button className={cn("p-2 rounded-xl transition-all", isDark ? "bg-surface-800 text-surface-400 group-hover:bg-primary-500 group-hover:text-white" : "bg-surface-50 text-surface-400 group-hover:bg-primary-600 group-hover:text-white shadow-sm")}>
+                         <ArrowUpRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                 </div>
             </div>
           ))}
         </AnimatePresence>

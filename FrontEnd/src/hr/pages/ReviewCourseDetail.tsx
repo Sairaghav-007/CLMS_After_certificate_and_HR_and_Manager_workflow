@@ -80,7 +80,7 @@ export default function ReviewCourseDetail() {
   const handlePublishNow = () => {
     publishCourse(course.id);
     toast.success('Published successfully!');
-    navigate('/published-courses');
+    navigate('/hr/published-courses');
   };
 
   const handleSchedule = () => {

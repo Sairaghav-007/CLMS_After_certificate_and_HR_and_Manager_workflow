@@ -72,7 +72,8 @@ public class EmployeeCourseController {
                             course.getDescription(),
                             course.getDueDate(),
                             progressPercent,
-                            status
+                            status,
+                            course.getThumbnail() != null ? course.getThumbnail() : ""
                     );
                 })
                 .toList();
@@ -166,7 +167,8 @@ public class EmployeeCourseController {
                         section.getMaterialUrl(),
                         section.getSectionOrder(),
                         secProgress,
-                        secCompleted
+                        secCompleted,
+                        section.getDuration() != null ? section.getDuration() : 0
                 ));
             }
 
