@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -67,6 +68,20 @@ public class ManagerController {
         return sseService.register();
     }
 
+    private List<Course> getAssignedCoursesForEmployee(User emp, List<Course> activeCourses) {
+        return activeCourses.stream()
+                .filter(c -> "PUBLISHED".equalsIgnoreCase(c.getStatus()) || "READY_TO_PUBLISH".equalsIgnoreCase(c.getStatus()))
+                .filter(c -> {
+                    if ("Department-Oriented".equalsIgnoreCase(c.getCategory())) {
+                        String empDept = emp.getDepartment();
+                        String courseDept = c.getDepartment();
+                        return empDept != null && empDept.equalsIgnoreCase(courseDept);
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+    }
+
     // Dashboard Stats / KPI Endpoint
     @GetMapping("/dashboard/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
@@ -74,29 +89,53 @@ public class ManagerController {
                 .filter(u -> u.getRole() == Role.EMPLOYEE)
                 .collect(Collectors.toList());
 
-        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findAll();
+        List<Course> activeCourses = courseRepository.findByActiveTrue();
+        List<CourseProgress> allProgress = courseProgressRepository.findAll();
         List<Certificate> allCerts = certificateRepository.findAll();
 
         long totalMembers = employees.size();
-        long completed = enrollments.stream().filter(e -> "Completed".equalsIgnoreCase(e.getStatus())).count();
-        long inProgress = enrollments.stream().filter(e -> "In Progress".equalsIgnoreCase(e.getStatus())).count();
-        long overdue = enrollments.stream().filter(e -> "Non-Compliant".equalsIgnoreCase(e.getStatus())).count();
+        long totalAssigned = 0;
+        long completed = 0;
+        long inProgress = 0;
+        long overdue = 0;
 
-        // Compute real average quiz score from course_progress
-        List<CourseProgress> allProgress = courseProgressRepository.findAll();
+        java.time.LocalDate today = java.time.LocalDate.now();
+
+        for (User emp : employees) {
+            List<Course> empCourses = getAssignedCoursesForEmployee(emp, activeCourses);
+            totalAssigned += empCourses.size();
+            for (Course course : empCourses) {
+                CourseProgress prog = allProgress.stream()
+                        .filter(p -> p.getEmployeeId().equals(emp.getId()) && p.getCourseId().equals(course.getId()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (prog != null && prog.isCompleted()) {
+                    completed++;
+                } else {
+                    if (prog != null && prog.getProgressPercentage() > 0) {
+                        inProgress++;
+                    }
+                    if (course.getDueDate() != null && course.getDueDate().isBefore(today)) {
+                        overdue++;
+                    }
+                }
+            }
+        }
+
         double avgScore = allProgress.stream()
                 .filter(p -> p.getLastScore() != null && p.getLastScore() > 0)
                 .mapToInt(CourseProgress::getLastScore)
                 .average()
                 .orElse(0.0);
 
-        long completionRate = totalMembers > 0
-                ? Math.round(((double) completed / Math.max(totalMembers, 1)) * 100)
+        long completionRate = totalAssigned > 0
+                ? Math.round(((double) completed / totalAssigned) * 100)
                 : 0;
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalTeamMembers", totalMembers);
-        stats.put("assignedCourses", totalMembers > 0 ? totalMembers * 3 : 0);
+        stats.put("assignedCourses", totalAssigned);
         stats.put("completedCourses", completed);
         stats.put("inProgressCourses", inProgress);
         stats.put("overdueEmployees", overdue);
@@ -114,6 +153,9 @@ public class ManagerController {
                 .filter(u -> u.getRole() == Role.EMPLOYEE)
                 .collect(Collectors.toList());
 
+        List<Course> activeCourses = courseRepository.findByActiveTrue();
+        List<CourseProgress> allProgress = courseProgressRepository.findAll();
+
         List<Map<String, Object>> activity = new ArrayList<>();
         
         for (User emp : employees) {
@@ -123,9 +165,18 @@ public class ManagerController {
             record.put("department", emp.getDepartment() != null ? emp.getDepartment() : "Engineering");
             record.put("designation", emp.getDesignation() != null ? emp.getDesignation() : "Software Engineer");
             
-            // Mock counts
-            record.put("completedCourses", "Non-Compliant".equals(emp.getStatus()) ? 0 : 2);
-            record.put("assignedCourses", 3);
+            List<Course> empCourses = getAssignedCoursesForEmployee(emp, activeCourses);
+            long empCompleted = 0;
+            for (Course course : empCourses) {
+                boolean isComp = allProgress.stream()
+                        .anyMatch(p -> p.getEmployeeId().equals(emp.getId()) && p.getCourseId().equals(course.getId()) && p.isCompleted());
+                if (isComp) {
+                    empCompleted++;
+                }
+            }
+
+            record.put("completedCourses", empCompleted);
+            record.put("assignedCourses", (long) empCourses.size());
             record.put("status", emp.getStatus());
             record.put("avatar", emp.getFullName() != null && !emp.getFullName().isEmpty() ? emp.getFullName().substring(0, 1) : "E");
             
@@ -139,15 +190,33 @@ public class ManagerController {
     @GetMapping("/dashboard/trend")
     public ResponseEntity<List<Map<String, Object>>> getTrend() {
         List<Map<String, Object>> trend = new ArrayList<>();
-        String[] periods = {"Jan", "Feb", "Mar", "Apr", "May", "Jun"};
-        int[] completedValues = {12, 18, 25, 30, 42, 54};
-        int[] inProgressValues = {15, 12, 10, 14, 18, 20};
+        List<CourseProgress> allProgress = courseProgressRepository.findAll();
 
-        for (int i = 0; i < periods.length; i++) {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM");
+
+        for (int i = 5; i >= 0; i--) {
+            java.time.LocalDate targetDate = today.minusMonths(i);
+            String monthName = targetDate.format(monthFormatter);
+            int year = targetDate.getYear();
+            int monthValue = targetDate.getMonthValue();
+
+            long compCount = allProgress.stream()
+                    .filter(p -> p.isCompleted() && p.getCompletedAt() != null
+                            && p.getCompletedAt().getYear() == year
+                            && p.getCompletedAt().getMonthValue() == monthValue)
+                    .count();
+
+            long ipCount = allProgress.stream()
+                    .filter(p -> !p.isCompleted() && p.getProgressPercentage() > 0 && p.getLastAccessed() != null
+                            && p.getLastAccessed().getYear() == year
+                            && p.getLastAccessed().getMonthValue() == monthValue)
+                    .count();
+
             Map<String, Object> data = new HashMap<>();
-            data.put("period", periods[i]);
-            data.put("completed", completedValues[i]);
-            data.put("inProgress", inProgressValues[i]);
+            data.put("period", monthName);
+            data.put("completed", compCount);
+            data.put("inProgress", ipCount);
             trend.add(data);
         }
 
@@ -166,9 +235,9 @@ public class ManagerController {
         long nonCompliant = employees.stream().filter(e -> "Non-Compliant".equalsIgnoreCase(e.getStatus())).count();
 
         Map<String, Object> res = new HashMap<>();
-        res.put("compliant", compliant > 0 ? compliant : 10);
-        res.put("atRisk", atRisk > 0 ? atRisk : 3);
-        res.put("nonCompliant", nonCompliant > 0 ? nonCompliant : 1);
+        res.put("compliant", compliant);
+        res.put("atRisk", atRisk);
+        res.put("nonCompliant", nonCompliant);
 
         return ResponseEntity.ok(res);
     }
@@ -419,7 +488,6 @@ public class ManagerController {
         res.put("message", "Nudge warning alert successfully dispatched to " + emp.getFullName());
         return ResponseEntity.ok(res);
     }
-
     @GetMapping("/nudge/history")
     public ResponseEntity<List<NudgeLog>> getNudgeHistory() {
         return ResponseEntity.ok(nudgeLogRepository.findAllByOrderBySentAtDesc());
@@ -445,16 +513,34 @@ public class ManagerController {
             map.put("linkedinUrl", emp.getLinkedinUrl());
             map.put("avatar", emp.getFullName() != null && !emp.getFullName().isEmpty() ? emp.getFullName().substring(0, 1) : "E");
 
+            List<Course> empCourses = getAssignedCoursesForEmployee(emp, activeCourses);
+
             // Compute database-driven stats
             List<CourseProgress> progresses = courseProgressRepository.findByEmployeeId(emp.getId());
-            long completed = progresses.stream().filter(CourseProgress::isCompleted).count();
-            long inProgress = progresses.stream().filter(p -> p.getProgressPercentage() > 0 && !p.isCompleted()).count();
-            long overdue = progresses.stream().filter(p -> {
-                Course course = courseRepository.findById(p.getCourseId()).orElse(null);
-                return !p.isCompleted() && course != null && course.getDueDate().isBefore(LocalDate.now());
-            }).count();
+            long completed = 0;
+            long inProgress = 0;
+            long overdue = 0;
+            
+            java.time.LocalDate today = java.time.LocalDate.now();
+            for (Course c : empCourses) {
+                CourseProgress p = progresses.stream()
+                        .filter(prog -> prog.getCourseId().equals(c.getId()))
+                        .findFirst()
+                        .orElse(null);
+                
+                if (p != null && p.isCompleted()) {
+                    completed++;
+                } else {
+                    if (p != null && p.getProgressPercentage() > 0) {
+                        inProgress++;
+                    }
+                    if (c.getDueDate() != null && c.getDueDate().isBefore(today)) {
+                        overdue++;
+                    }
+                }
+            }
 
-            map.put("assignedCourses", activeCourses.size());
+            map.put("assignedCourses", empCourses.size());
             map.put("completedCourses", completed);
             map.put("inProgressCourses", inProgress);
             map.put("overdueCourses", overdue);
@@ -467,11 +553,11 @@ public class ManagerController {
                     .mapToInt(CourseProgress::getLastScore)
                     .average()
                     .orElse(0.0);
-            map.put("averageQuizScore", Math.round(avgScore > 0 ? avgScore : 85));
+            map.put("averageQuizScore", Math.round(avgScore));
             
             double hours = progresses.stream()
                     .mapToDouble(p -> {
-                        Course course = courseRepository.findById(p.getCourseId()).orElse(null);
+                        Course course = activeCourses.stream().filter(c -> c.getId().equals(p.getCourseId())).findFirst().orElse(null);
                         int duration = course != null ? course.getDuration() : 6;
                         return (p.getProgressPercentage() / 100.0) * duration;
                     })
@@ -502,10 +588,14 @@ public class ManagerController {
             return ResponseEntity.badRequest().build();
         }
 
+        User emp = userRepository.findById(empId)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+
         List<Course> activeCourses = courseRepository.findByActiveTrue();
+        List<Course> empCourses = getAssignedCoursesForEmployee(emp, activeCourses);
         List<Map<String, Object>> list = new ArrayList<>();
 
-        for (Course course : activeCourses) {
+        for (Course course : empCourses) {
             CourseProgress progress = courseProgressRepository.findByEmployeeIdAndCourseId(empId, course.getId())
                     .orElse(null);
 

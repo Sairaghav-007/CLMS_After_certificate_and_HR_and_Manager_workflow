@@ -19,6 +19,9 @@ public class Question {
     @Column(name = "course_id", nullable = false)
     private Long courseId;
 
+    @Column(name = "section_id")
+    private Long sectionId; // Optional: links question to a specific section
+
     @Column(length = 2048, nullable = false)
     private String question;
 
@@ -28,10 +31,10 @@ public class Question {
     @Column(name = "option_b", nullable = false)
     private String optionB;
 
-    @Column(name = "option_c", nullable = false)
+    @Column(name = "option_c")
     private String optionC;
 
-    @Column(name = "option_d", nullable = false)
+    @Column(name = "option_d")
     private String optionD;
 
     @Column(name = "correct_answer", nullable = false) // "A", "B", "C", or "D"

@@ -6,6 +6,7 @@ import { cn } from '@/hr/lib/utils';
 import { Stepper } from '@/hr/components/course-creation/Stepper';
 import { MetadataStep } from '@/hr/components/course-creation/MetadataStep';
 import { CurriculumStep } from '@/hr/components/course-creation/CurriculumStep';
+import { QuizStep } from '@/hr/components/course-creation/QuizStep';
 import { PreviewStep } from '@/hr/components/course-creation/PreviewStep';
 import { SubmitSuccessScreen } from '@/hr/components/course-creation/SubmitSuccessScreen';
 import { Save, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -14,6 +15,7 @@ import toast, { Toaster } from 'react-hot-toast';
 const STEPS = [
   { title: 'Course Metadata', description: 'Basic information' },
   { title: 'Modules & Sessions', description: 'Course content' },
+  { title: 'Quiz & Questions', description: 'Assessment questions' },
   { title: 'Course Preview', description: 'Review & Submit' },
 ];
 
@@ -73,6 +75,8 @@ export default function CourseCreation() {
   if (showSubmitSuccess) {
     return <SubmitSuccessScreen />;
   }
+
+  const lastContentStep = STEPS.length - 2; // index 2 = QuizStep (last before preview)
 
   return (
     <motion.div
@@ -134,13 +138,14 @@ export default function CourseCreation() {
           >
             {currentStep === 0 && <MetadataStep onNext={goToNextStep} />}
             {currentStep === 1 && <CurriculumStep onNext={goToNextStep} onBack={prevStep} />}
-            {currentStep === 2 && <PreviewStep onBack={prevStep} />}
+            {currentStep === 2 && <QuizStep onNext={goToNextStep} onBack={prevStep} />}
+            {currentStep === 3 && <PreviewStep onBack={prevStep} />}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Fixed bottom nav — only show on steps 0 & 1 */}
-      {currentStep < 2 && (
+      {/* Fixed bottom nav — only show on steps 0, 1, 2 */}
+      {currentStep < STEPS.length - 1 && (
         <div
           className={cn(
             'fixed bottom-0 left-0 right-0 border-t p-4 z-40 backdrop-blur-xl',
@@ -166,7 +171,7 @@ export default function CourseCreation() {
               onClick={nextStep}
               className="flex items-center gap-2 px-8 py-3 rounded-xl font-semibold bg-primary-600 text-white hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all"
             >
-              Continue
+              {currentStep === lastContentStep ? 'Go to Preview' : 'Continue'}
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
@@ -175,4 +180,3 @@ export default function CourseCreation() {
     </motion.div>
   );
 }
-

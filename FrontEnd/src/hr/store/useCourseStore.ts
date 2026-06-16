@@ -179,15 +179,19 @@ export const useCourseStore = create<CourseState>()(
         try {
           const { api } = await import('@/api/client');
           const s = get();
-          const idx = s.courses.findIndex((c) => c.id === courseId);
-          const base = idx > -1 ? s.courses[idx] : (s.currentCourse as Course);
           
-          const updated = {
-            ...base,
-            status: 'PENDING_MANAGER_REVIEW' as CourseStatus,
-          };
-
-          await api.post('/hr/courses', updated);
+          // Find the course — get its numeric DB id
+          const base = s.courses.find((c) => c.id === courseId) || (s.currentCourse as any);
+          if (!base) { console.error("Course not found for submit:", courseId); return; }
+          
+          const dbId = base.id;
+          
+          // First ensure course content is saved (saveDraft syncs to DB)
+          await get().saveDraft();
+          
+          // Now use the dedicated submit-review endpoint with the (possibly updated) DB id
+          const freshId = get().currentCourse.id || dbId;
+          await api.post(`/hr/courses/${freshId}/submit-review`);
           await s.fetchCourses();
 
           set({
@@ -231,11 +235,9 @@ export const useCourseStore = create<CourseState>()(
           const s = get();
           const base = s.courses.find((c) => c.id === courseId);
           if (base) {
-            const updated = {
-              ...base,
-              status: 'PENDING_MANAGER_REVIEW' as CourseStatus,
-            };
-            await api.post('/hr/courses', updated);
+            // Save any updates first, then use dedicated endpoint
+            await api.post('/hr/courses', { ...base, status: 'DRAFT' });
+            await api.post(`/hr/courses/${courseId}/submit-review`);
             await s.fetchCourses();
           }
         } catch (error) {

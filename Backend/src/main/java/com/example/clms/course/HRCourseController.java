@@ -296,23 +296,6 @@ public class HRCourseController {
         savedCourse.getModules().addAll(modules);
         savedCourse = courseRepository.save(savedCourse);
 
-        // Seed basic questions if none exist
-        if (questionRepository.findByCourseId(savedCourse.getId()).isEmpty()) {
-            questionRepository.save(Question.builder().courseId(savedCourse.getId())
-                    .question("What is the core target of learning " + savedCourse.getTitle() + "?")
-                    .optionA("To gain knowledge and follow proper workplace procedures")
-                    .optionB("To finish training with no operational changes")
-                    .optionC("None of the above")
-                    .optionD("All of the above")
-                    .correctAnswer("A").build());
-            questionRepository.save(Question.builder().courseId(savedCourse.getId())
-                    .question("Reviewing corporate compliance training is a continuous requirement.")
-                    .optionA("True")
-                    .optionB("False")
-                    .optionC("")
-                    .optionD("")
-                    .correctAnswer("A").build());
-        }
 
         // Audit Log Entry
         AuditLog audit = AuditLog.builder()
@@ -460,6 +443,127 @@ public class HRCourseController {
         return ResponseEntity.ok().build();
     }
 
+    // ── Submit course for manager review ─────────────────────────────────────
+    @PostMapping("/courses/{courseId}/submit-review")
+    @Transactional
+    public ResponseEntity<Map<String, String>> submitForReview(@PathVariable Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found: " + courseId));
+
+        // Only allow transitioning from DRAFT or REJECTED
+        if (!"DRAFT".equalsIgnoreCase(course.getStatus()) && !"REJECTED".equalsIgnoreCase(course.getStatus())) {
+            Map<String, String> err = new HashMap<>();
+            err.put("error", "Course status cannot be changed to pending review from: " + course.getStatus());
+            return ResponseEntity.badRequest().body(err);
+        }
+
+        course.setStatus("PENDING_MANAGER_REVIEW");
+        courseRepository.save(course);
+
+        User hrUser = getAuthenticatedUser();
+        AuditLog audit = AuditLog.builder()
+                .courseId(courseId)
+                .username(hrUser.getFullName())
+                .action("Submitted for Manager Review")
+                .status("PENDING_MANAGER_REVIEW")
+                .comment("HR submitted course for manager review.")
+                .timestamp(LocalDateTime.now())
+                .build();
+        auditLogRepository.save(audit);
+
+        // Broadcast SSE event
+        Map<String, Object> ssePayload = new HashMap<>();
+        ssePayload.put("courseId", courseId);
+        ssePayload.put("courseTitle", course.getTitle());
+        ssePayload.put("status", "PENDING_MANAGER_REVIEW");
+        ssePayload.put("action", "SUBMITTED_FOR_REVIEW");
+        sseService.broadcast("course_review", ssePayload);
+
+        Map<String, String> res = new HashMap<>();
+        res.put("status", "success");
+        res.put("message", "Course submitted for manager review.");
+        return ResponseEntity.ok(res);
+    }
+
+    // ── Questions CRUD ────────────────────────────────────────────────────────
+    @GetMapping("/courses/{courseId}/questions")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<Map<String, Object>>> getQuestions(@PathVariable Long courseId) {
+        List<Question> questions = questionRepository.findByCourseId(courseId);
+        List<Map<String, Object>> result = questions.stream().map(q -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", q.getId());
+            m.put("courseId", q.getCourseId());
+            m.put("sectionId", q.getSectionId());
+            m.put("question", q.getQuestion());
+            m.put("optionA", q.getOptionA());
+            m.put("optionB", q.getOptionB());
+            m.put("optionC", q.getOptionC() != null ? q.getOptionC() : "");
+            m.put("optionD", q.getOptionD() != null ? q.getOptionD() : "");
+            m.put("correctAnswer", q.getCorrectAnswer());
+            return m;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
+    public static class QuestionSaveRequest {
+        public Long id;
+        public Long sectionId;
+        public String question;
+        public String optionA;
+        public String optionB;
+        public String optionC;
+        public String optionD;
+        public String correctAnswer;
+    }
+
+    @PostMapping("/courses/{courseId}/questions")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> saveQuestions(
+            @PathVariable Long courseId,
+            @RequestBody List<QuestionSaveRequest> requests) {
+
+        courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found: " + courseId));
+
+        List<Question> saved = new ArrayList<>();
+        for (QuestionSaveRequest req : requests) {
+            Question q;
+            if (req.id != null) {
+                q = questionRepository.findById(req.id).orElse(new Question());
+            } else {
+                q = new Question();
+            }
+            q.setCourseId(courseId);
+            q.setSectionId(req.sectionId);
+            q.setQuestion(req.question != null ? req.question : "");
+            q.setOptionA(req.optionA != null ? req.optionA : "");
+            q.setOptionB(req.optionB != null ? req.optionB : "");
+            q.setOptionC(req.optionC != null ? req.optionC : "");
+            q.setOptionD(req.optionD != null ? req.optionD : "");
+            q.setCorrectAnswer(req.correctAnswer != null ? req.correctAnswer : "A");
+            saved.add(questionRepository.save(q));
+        }
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("saved", saved.size());
+        res.put("courseId", courseId);
+        return ResponseEntity.ok(res);
+    }
+
+    @DeleteMapping("/courses/{courseId}/questions/{questionId}")
+    @Transactional
+    public ResponseEntity<Void> deleteQuestion(
+            @PathVariable Long courseId,
+            @PathVariable Long questionId) {
+        questionRepository.findById(questionId).ifPresent(q -> {
+            if (q.getCourseId().equals(courseId)) {
+                questionRepository.delete(q);
+            }
+        });
+        return ResponseEntity.ok().build();
+    }
+
     public static class CourseSaveRequest {
         public String id;
         public String title;
@@ -490,3 +594,4 @@ public class HRCourseController {
         public int duration;
     }
 }
+

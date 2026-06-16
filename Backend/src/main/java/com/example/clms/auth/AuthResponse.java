@@ -9,5 +9,6 @@ public record AuthResponse(
         String fullName,
         String email,
         Role role,
-        String linkedinUrl
+        String linkedinUrl,
+        String department
 ) {}

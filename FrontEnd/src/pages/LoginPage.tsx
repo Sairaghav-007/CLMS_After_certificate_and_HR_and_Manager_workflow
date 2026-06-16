@@ -15,6 +15,7 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [department, setDepartment] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -34,6 +35,7 @@ export function LoginPage() {
               email,
               password,
               linkedinUrl,
+              department,
             })
           : await api.post("/auth/login", {
               email,
@@ -244,6 +246,36 @@ export function LoginPage() {
                     disabled={isSubmitting}
                     type="url"
                   />
+                </div>
+              )}
+
+              {mode === "signup" && (
+                <div>
+                  <label className="block text-[11px] font-black uppercase tracking-wider text-surface-500 mb-1.5">
+                    Department *
+                  </label>
+                  <select
+                    className="w-full rounded-xl border border-surface-200 bg-surface-50 px-4 py-3 text-sm font-semibold outline-none focus:bg-white focus:border-primary-400 focus:ring-4 focus:ring-primary-100 transition-all text-surface-700"
+                    value={department}
+                    onChange={(event) => setDepartment(event.target.value)}
+                    disabled={isSubmitting}
+                    required
+                  >
+                    <option value="">Select Department</option>
+                    <option value="Frontend Development">Frontend Development</option>
+                    <option value="Backend Development">Backend Development</option>
+                    <option value="Full Stack Development">Full Stack Development</option>
+                    <option value="AI / ML">AI / ML</option>
+                    <option value="Data Science">Data Science</option>
+                    <option value="Cloud Engineering">Cloud Engineering</option>
+                    <option value="DevOps">DevOps</option>
+                    <option value="Cyber Security">Cyber Security</option>
+                    <option value="QA / Testing">QA / Testing</option>
+                    <option value="UI / UX">UI / UX</option>
+                    <option value="Mobile Development">Mobile Development</option>
+                    <option value="Business Analyst">Business Analyst</option>
+                    <option value="Product Management">Product Management</option>
+                  </select>
                 </div>
               )}
             </div>

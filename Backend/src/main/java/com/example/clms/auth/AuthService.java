@@ -60,7 +60,8 @@ public class AuthService {
                 user.getFullName(),
                 user.getEmail(),
                 user.getRole(),
-                user.getLinkedinUrl()
+                user.getLinkedinUrl(),
+                user.getDepartment()
         );
     }
 
@@ -77,6 +78,7 @@ public class AuthService {
                 .role(Role.EMPLOYEE)
                 .active(true)
                 .linkedinUrl(request.linkedinUrl())
+                .department(request.department())
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -99,7 +101,8 @@ public class AuthService {
                 savedUser.getFullName(),
                 savedUser.getEmail(),
                 savedUser.getRole(),
-                savedUser.getLinkedinUrl()
+                savedUser.getLinkedinUrl(),
+                savedUser.getDepartment()
         );
     }
 
@@ -122,7 +125,8 @@ public class AuthService {
                 user.getFullName(),
                 user.getEmail(),
                 user.getRole(),
-                user.getLinkedinUrl()
+                user.getLinkedinUrl(),
+                user.getDepartment()
         );
     }
 
@@ -149,7 +153,8 @@ public class AuthService {
                 user.getFullName(),
                 user.getEmail(),
                 user.getRole(),
-                user.getLinkedinUrl()
+                user.getLinkedinUrl(),
+                user.getDepartment()
         );
     }
 
@@ -177,7 +182,8 @@ public class AuthService {
                 saved.getFullName(),
                 saved.getEmail(),
                 saved.getRole(),
-                saved.getLinkedinUrl()
+                saved.getLinkedinUrl(),
+                saved.getDepartment()
         );
     }
 }

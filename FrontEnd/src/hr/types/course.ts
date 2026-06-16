@@ -80,6 +80,18 @@ export interface Notification {
   linkTo: string;
 }
 
+export interface Question {
+  id?: string | number;
+  courseId?: string | number;
+  sectionId?: string | number | null;
+  question: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correctAnswer: 'A' | 'B' | 'C' | 'D';
+}
+
 export interface Course {
   id: string;
   parentId?: string;
@@ -106,5 +118,6 @@ export interface Course {
   approvedBy?: string;
   changeRequests: ChangeRequest[];
   auditLogs: AuditLogEntry[];
+  questions?: Question[];
 }
 

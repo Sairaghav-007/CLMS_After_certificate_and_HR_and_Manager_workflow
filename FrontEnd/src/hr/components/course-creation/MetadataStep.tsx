@@ -175,6 +175,37 @@ export const MetadataStep: React.FC<MetadataStepProps> = ({ onNext }) => {
                   <option value="Department-Oriented">Department-Oriented</option>
                 </select>
               </div>
+
+              {/* Target Department — shown when Department-Oriented is chosen */}
+              {watch('category') === 'Department-Oriented' && (
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold">Target Department *</label>
+                  <select
+                    value={currentCourse.department || ''}
+                    onChange={(e) => updateMetadata({ department: e.target.value })}
+                    className={cn(
+                      "w-full px-3 py-2 rounded-lg border transition-all",
+                      isDark ? "bg-surface-800 border-surface-700" : "bg-surface-50 border-surface-200"
+                    )}
+                    required
+                  >
+                    <option value="">Select Target Department</option>
+                    <option value="Frontend Development">Frontend Development</option>
+                    <option value="Backend Development">Backend Development</option>
+                    <option value="Full Stack Development">Full Stack Development</option>
+                    <option value="AI / ML">AI / ML</option>
+                    <option value="Data Science">Data Science</option>
+                    <option value="Cloud Engineering">Cloud Engineering</option>
+                    <option value="DevOps">DevOps</option>
+                    <option value="Cyber Security">Cyber Security</option>
+                    <option value="QA / Testing">QA / Testing</option>
+                    <option value="UI / UX">UI / UX</option>
+                    <option value="Mobile Development">Mobile Development</option>
+                    <option value="Business Analyst">Business Analyst</option>
+                    <option value="Product Management">Product Management</option>
+                  </select>
+                </div>
+              )}
               
               <div className="pt-2">
                  <div className={cn(

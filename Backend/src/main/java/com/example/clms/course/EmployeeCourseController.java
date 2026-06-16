@@ -29,6 +29,16 @@ public class EmployeeCourseController {
                 .orElseThrow(() -> new RuntimeException("Logged in user not found: " + email));
     }
 
+    private void checkCourseAccess(User employee, Course course) {
+        if ("Department-Oriented".equalsIgnoreCase(course.getCategory())) {
+            String empDept = employee.getDepartment();
+            String courseDept = course.getDepartment();
+            if (empDept == null || !empDept.equalsIgnoreCase(courseDept)) {
+                throw new RuntimeException("Access denied: This course is for the " + courseDept + " department.");
+            }
+        }
+    }
+
     @GetMapping("/courses")
     @Transactional(readOnly = true)
     public List<CourseSummaryResponse> getCourses(@RequestParam(required = false) String search) {
@@ -39,6 +49,16 @@ public class EmployeeCourseController {
 
         return courses.stream()
                 .filter(course -> "PUBLISHED".equalsIgnoreCase(course.getStatus()) || "READY_TO_PUBLISH".equalsIgnoreCase(course.getStatus()))
+                .filter(course -> {
+                    // Department-Oriented courses: only visible to matching department
+                    if ("Department-Oriented".equalsIgnoreCase(course.getCategory())) {
+                        String empDept = employee.getDepartment();
+                        String courseDept = course.getDepartment();
+                        return empDept != null && empDept.equalsIgnoreCase(courseDept);
+                    }
+                    // Mandatory / Elective courses visible to all
+                    return true;
+                })
                 .map(course -> {
                     CourseProgress progress = courseProgressRepository.findByEmployeeIdAndCourseId(employee.getId(), course.getId())
                             .orElse(null);
@@ -64,6 +84,7 @@ public class EmployeeCourseController {
         User employee = getAuthenticatedUser();
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
+        checkCourseAccess(employee, course);
 
         CourseProgress courseProgress = courseProgressRepository.findByEmployeeIdAndCourseId(employee.getId(), id)
                 .orElse(null);
@@ -208,6 +229,9 @@ public class EmployeeCourseController {
             @RequestBody ProgressUpdateRequest req
     ) {
         User employee = getAuthenticatedUser();
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+        checkCourseAccess(employee, course);
 
         // Save section progress
         CourseSectionProgress secProg = courseSectionProgressRepository
@@ -233,8 +257,7 @@ public class EmployeeCourseController {
         courseSectionProgressRepository.save(secProg);
 
         // Fetch course structure
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new RuntimeException("Course not found"));
+        // Course is already fetched at the top of the method
 
         // Compute total sections and total completed sections
         int totalSections = 0;
@@ -300,6 +323,7 @@ public class EmployeeCourseController {
         User employee = getAuthenticatedUser();
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
+        checkCourseAccess(employee, course);
 
         CourseProgress progress = courseProgressRepository.findByEmployeeIdAndCourseId(employee.getId(), courseId)
                 .orElse(null);
