@@ -25,7 +25,7 @@ const routeLabels: Record<string, string> = {
 export default function Navbar() {
   const location = useLocation();
   const { resolvedTheme, setTheme } = useThemeStore();
-  const { unreadCount } = useNotificationStore();
+  const { unreadCount, fetchNotifications } = useNotificationStore();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
@@ -33,6 +33,10 @@ export default function Navbar() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const currentLabel = routeLabels[location.pathname] || 'Dashboard';
+
+  useEffect(() => {
+    fetchNotifications().catch((err) => console.warn(err));
+  }, [fetchNotifications]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

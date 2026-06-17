@@ -189,6 +189,7 @@ public class HRCourseController {
         }
 
         boolean isNew = (course == null);
+        boolean wasPublishedBefore = !isNew && "PUBLISHED".equalsIgnoreCase(course.getStatus());
         // Only Published courses are active/visible to employees
         boolean isPublished = "PUBLISHED".equalsIgnoreCase(req.status);
         if (isNew) {
@@ -335,6 +336,27 @@ public class HRCourseController {
                     );
                 } catch (Exception e) {
                     System.err.println("[FCM] Failed to notify employee " + emp.getId() + ": " + e.getMessage());
+                }
+            }
+        }
+
+        boolean isUnpublished = wasPublishedBefore && !isPublished;
+        if (isUnpublished) {
+            final Course unpublishedCourse = savedCourse;
+            List<User> employees = userRepository.findAll().stream()
+                    .filter(u -> u.getRole() == com.example.clms.user.Role.EMPLOYEE && u.isActive())
+                    .collect(java.util.stream.Collectors.toList());
+            for (User emp : employees) {
+                try {
+                    notificationService.notifyEmployee(
+                        emp,
+                        "quiz_failure",
+                        "Course Unpublished",
+                        "The course \"" + unpublishedCourse.getTitle() + "\" has been unpublished/withdrawn by HR.",
+                        null
+                    );
+                } catch (Exception e) {
+                    System.err.println("[FCM] Failed to notify employee " + emp.getId() + " about unpublished course: " + e.getMessage());
                 }
             }
         }
@@ -503,6 +525,41 @@ public class HRCourseController {
                 .timestamp(LocalDateTime.now())
                 .build();
         auditLogRepository.save(audit);
+
+        // Notify Manager
+        User manager = userRepository.findAll().stream()
+                .filter(u -> u.getRole() == Role.MANAGER)
+                .findFirst()
+                .orElse(null);
+        if (manager != null) {
+            Notification notification = Notification.builder()
+                    .senderId(hrUser.getId())
+                    .receiverId(manager.getId())
+                    .message("HR submitted course \"" + course.getTitle() + "\" for review.")
+                    .isRead(false)
+                    .createdAt(LocalDateTime.now())
+                    .type("change_request") // Maps to compliance / review request in frontend
+                    .courseId(courseId)
+                    .courseTitle(course.getTitle())
+                    .build();
+            notificationRepository.save(notification);
+
+            if (manager.getFcmToken() != null && !manager.getFcmToken().trim().isEmpty()) {
+                try {
+                    Map<String, Object> fcmData = new HashMap<>();
+                    fcmData.put("type", "review_request");
+                    fcmData.put("courseId", String.valueOf(courseId));
+                    fcmService.sendPushNotification(
+                        manager.getFcmToken(), 
+                        "New Course Submission", 
+                        "HR has submitted course \"" + course.getTitle() + "\" for review.", 
+                        fcmData
+                    );
+                } catch (Exception e) {
+                    System.err.println("[FCM] Failed to send course submission push: " + e.getMessage());
+                }
+            }
+        }
 
         // Broadcast SSE event
         Map<String, Object> ssePayload = new HashMap<>();

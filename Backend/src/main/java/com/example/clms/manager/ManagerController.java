@@ -491,20 +491,43 @@ public class ManagerController {
                 .filter(u -> u.getRole() == Role.HR)
                 .findFirst()
                 .orElse(null);
-        Long hrUserId = hrUser != null ? hrUser.getId() : 2L;
+        
+        if (hrUser != null) {
+            String msg = "READY_TO_PUBLISH".equals(nextStatus)
+                    ? "Manager approved \"" + course.getTitle() + "\""
+                    : "Manager started reviewing \"" + course.getTitle() + "\"";
+            String nType = "READY_TO_PUBLISH".equals(nextStatus) ? "approved" : "submitted";
 
-        notificationRepository.save(
-                Notification.builder()
-                        .senderId(3L) // Manager Sarah Mitchell id
-                        .receiverId(hrUserId)
-                        .message("Manager approved \"" + course.getTitle() + "\"")
-                        .isRead(false)
-                        .createdAt(LocalDateTime.now())
-                        .type("approved")
-                        .courseId(courseId)
-                        .courseTitle(course.getTitle())
-                        .build()
-        );
+            notificationRepository.save(
+                    Notification.builder()
+                            .senderId(3L) // Manager Sarah Mitchell id
+                            .receiverId(hrUser.getId())
+                            .message(msg)
+                            .isRead(false)
+                            .createdAt(LocalDateTime.now())
+                            .type(nType)
+                            .courseId(courseId)
+                            .courseTitle(course.getTitle())
+                            .build()
+            );
+
+            // Send FCM Push
+            if (hrUser.getFcmToken() != null && !hrUser.getFcmToken().trim().isEmpty()) {
+                try {
+                    Map<String, Object> fcmData = new HashMap<>();
+                    fcmData.put("type", nType);
+                    fcmData.put("courseId", String.valueOf(courseId));
+                    fcmService.sendPushNotification(
+                        hrUser.getFcmToken(),
+                        "READY_TO_PUBLISH".equals(nextStatus) ? "Course Approved" : "Course Under Review",
+                        msg,
+                        fcmData
+                    );
+                } catch (Exception e) {
+                    System.err.println("[FCM] Failed to send approve/review push: " + e.getMessage());
+                }
+            }
+        }
 
         // Broadcast Real-time Event
         Map<String, Object> payload = new HashMap<>();
@@ -563,20 +586,38 @@ public class ManagerController {
                 .filter(u -> u.getRole() == Role.HR)
                 .findFirst()
                 .orElse(null);
-        Long hrUserId = hrUser != null ? hrUser.getId() : 2L;
+        
+        if (hrUser != null) {
+            notificationRepository.save(
+                    Notification.builder()
+                            .senderId(3L) // Manager Sarah Mitchell id
+                            .receiverId(hrUser.getId())
+                            .message("Manager rejected \"" + course.getTitle() + "\"")
+                            .isRead(false)
+                            .createdAt(LocalDateTime.now())
+                            .type("change_request")
+                            .courseId(courseId)
+                            .courseTitle(course.getTitle())
+                            .build()
+            );
 
-        notificationRepository.save(
-                Notification.builder()
-                        .senderId(3L) // Manager Sarah Mitchell id
-                        .receiverId(hrUserId)
-                        .message("Manager rejected \"" + course.getTitle() + "\"")
-                        .isRead(false)
-                        .createdAt(LocalDateTime.now())
-                        .type("change_request")
-                        .courseId(courseId)
-                        .courseTitle(course.getTitle())
-                        .build()
-        );
+            // Send FCM Push
+            if (hrUser.getFcmToken() != null && !hrUser.getFcmToken().trim().isEmpty()) {
+                try {
+                    Map<String, Object> fcmData = new HashMap<>();
+                    fcmData.put("type", "change_request");
+                    fcmData.put("courseId", String.valueOf(courseId));
+                    fcmService.sendPushNotification(
+                        hrUser.getFcmToken(),
+                        "Course Changes Requested",
+                        "Manager requested changes for course \"" + course.getTitle() + "\"",
+                        fcmData
+                    );
+                } catch (Exception e) {
+                    System.err.println("[FCM] Failed to send rejection push: " + e.getMessage());
+                }
+            }
+        }
 
         // Broadcast Real-time Event
         Map<String, Object> payload = new HashMap<>();
@@ -817,4 +858,53 @@ public class ManagerController {
 
         return ResponseEntity.ok(list);
     }
+
+    private User getAuthenticatedUser() {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Logged in user not found: " + email));
+    }
+
+    @GetMapping("/notifications")
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getManagerNotifications() {
+        User manager = getAuthenticatedUser();
+        List<Notification> list = notificationRepository.findByReceiverIdOrderByCreatedAtDesc(manager.getId());
+        
+        return list.stream()
+                .map(n -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", String.valueOf(n.getId()));
+                    map.put("type", n.getType());
+                    map.put("courseId", String.valueOf(n.getCourseId()));
+                    map.put("courseTitle", n.getCourseTitle());
+                    map.put("message", n.getMessage());
+                    map.put("read", n.isRead());
+                    map.put("timestamp", n.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                    map.put("linkTo", "/manager/review-courses/" + n.getCourseId());
+                    return map;
+                })
+                .toList();
+    }
+
+    @PostMapping("/notifications/{id}/read")
+    @Transactional
+    public ResponseEntity<Void> markNotificationRead(@PathVariable Long id) {
+        notificationRepository.findById(id).ifPresent(n -> {
+            n.setRead(true);
+            notificationRepository.save(n);
+        });
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/notifications/read-all")
+    @Transactional
+    public ResponseEntity<Void> markAllNotificationsRead() {
+        User manager = getAuthenticatedUser();
+        List<Notification> list = notificationRepository.findByReceiverIdOrderByCreatedAtDesc(manager.getId());
+        list.forEach(n -> n.setRead(true));
+        notificationRepository.saveAll(list);
+        return ResponseEntity.ok().build();
+    }
 }
+

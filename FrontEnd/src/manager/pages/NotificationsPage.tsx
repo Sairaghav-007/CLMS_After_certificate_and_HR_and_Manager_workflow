@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bell, CheckCircle2, ShieldAlert, BookOpen, 
@@ -12,7 +12,11 @@ import type { NotificationType } from '../types';
 
 export default function NotificationsPage() {
   const navigate = useNavigate();
-  const { notifications, markRead, markAllRead } = useNotificationStore();
+  const { notifications, fetchNotifications, markRead, markAllRead } = useNotificationStore();
+
+  useEffect(() => {
+    fetchNotifications().catch(err => console.warn(err));
+  }, [fetchNotifications]);
   const [filter, setFilter] = useState<NotificationType | 'All'>('All');
   const [search, setSearch] = useState('');
 

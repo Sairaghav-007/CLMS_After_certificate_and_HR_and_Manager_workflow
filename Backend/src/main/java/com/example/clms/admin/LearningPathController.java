@@ -1,5 +1,9 @@
 package com.example.clms.admin;
 
+import com.example.clms.user.User;
+import com.example.clms.user.Role;
+import com.example.clms.user.UserRepository;
+import com.example.clms.notification.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +17,12 @@ public class LearningPathController {
 
     @Autowired
     private LearningPathRepository learningPathRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @GetMapping
     public List<LearningPath> getAllPaths() {
@@ -31,7 +41,35 @@ public class LearningPathController {
         if (path.getId() == null || path.getId().trim().isEmpty()) {
             path.setId("PATH-" + System.currentTimeMillis());
         }
-        return learningPathRepository.save(path);
+        LearningPath saved = learningPathRepository.save(path);
+
+        // Notify Employees
+        try {
+            List<User> employees = userRepository.findAll().stream()
+                .filter(u -> u.getRole() == Role.EMPLOYEE && u.isActive())
+                .filter(u -> saved.getDepartment() == null || saved.getDepartment().isBlank() 
+                         || "All".equalsIgnoreCase(saved.getDepartment()) 
+                         || saved.getDepartment().equalsIgnoreCase(u.getDepartment()))
+                .toList();
+
+            for (User emp : employees) {
+                try {
+                    notificationService.notifyEmployee(
+                        emp,
+                        "course_assigned",
+                        "New Learning Path Assigned",
+                        "You have been assigned the learning path \"" + saved.getName() + "\".",
+                        null
+                    );
+                } catch (Exception e) {
+                    System.err.println("[FCM] Failed to notify employee " + emp.getId() + " about learning path: " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[LearningPath] Notification dispatch failed: " + e.getMessage());
+        }
+
+        return saved;
     }
 
     @PutMapping("/{id}")

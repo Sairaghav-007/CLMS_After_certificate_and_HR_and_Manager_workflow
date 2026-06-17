@@ -10,6 +10,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.example.clms.user.UserRepository;
+import com.example.clms.user.User;
+import com.example.clms.user.Role;
+import com.example.clms.notification.NotificationService;
 
 @RestController
 @RequestMapping("/api/admin/courses")
@@ -17,6 +21,12 @@ public class AdminCourseController {
 
     @Autowired
     private CourseRepository courseRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     public static class CourseDto {
         public String id;
@@ -68,18 +78,47 @@ public class AdminCourseController {
     @DeleteMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<Void> deleteCourse(@PathVariable Long id) {
-        // delete entries from related tables using JPQL to prevent constraint violations
-        entityManager.createQuery("DELETE FROM CourseProgress cp WHERE cp.courseId = :id").setParameter("id", id).executeUpdate();
-        entityManager.createQuery("DELETE FROM CourseSectionProgress csp WHERE csp.courseId = :id").setParameter("id", id).executeUpdate();
-        entityManager.createQuery("DELETE FROM Certificate c WHERE c.courseId = :id").setParameter("id", id).executeUpdate();
-        entityManager.createQuery("DELETE FROM CourseEnrollment ce WHERE ce.courseId = :id").setParameter("id", id).executeUpdate();
-        entityManager.createQuery("DELETE FROM ChangeRequest cr WHERE cr.courseId = :id").setParameter("id", id).executeUpdate();
-        entityManager.createQuery("DELETE FROM Notification n WHERE n.courseId = :id").setParameter("id", id).executeUpdate();
-        entityManager.createQuery("DELETE FROM AuditLog al WHERE al.courseId = :id").setParameter("id", id).executeUpdate();
-        entityManager.createQuery("DELETE FROM Question q WHERE q.courseId = :id").setParameter("id", id).executeUpdate();
-        entityManager.createQuery("DELETE FROM CourseContent cc WHERE cc.courseId = :id").setParameter("id", id).executeUpdate();
-        
-        courseRepository.deleteById(id);
-        return ResponseEntity.ok().build();
+        Optional<Course> courseOpt = courseRepository.findById(id);
+        if (courseOpt.isPresent()) {
+            Course course = courseOpt.get();
+            // delete entries from related tables using JPQL to prevent constraint violations
+            entityManager.createQuery("DELETE FROM CourseProgress cp WHERE cp.courseId = :id").setParameter("id", id).executeUpdate();
+            entityManager.createQuery("DELETE FROM CourseSectionProgress csp WHERE csp.courseId = :id").setParameter("id", id).executeUpdate();
+            entityManager.createQuery("DELETE FROM Certificate c WHERE c.courseId = :id").setParameter("id", id).executeUpdate();
+            entityManager.createQuery("DELETE FROM CourseEnrollment ce WHERE ce.courseId = :id").setParameter("id", id).executeUpdate();
+            entityManager.createQuery("DELETE FROM ChangeRequest cr WHERE cr.courseId = :id").setParameter("id", id).executeUpdate();
+            entityManager.createQuery("DELETE FROM Notification n WHERE n.courseId = :id").setParameter("id", id).executeUpdate();
+            entityManager.createQuery("DELETE FROM AuditLog al WHERE al.courseId = :id").setParameter("id", id).executeUpdate();
+            entityManager.createQuery("DELETE FROM Question q WHERE q.courseId = :id").setParameter("id", id).executeUpdate();
+            entityManager.createQuery("DELETE FROM CourseContent cc WHERE cc.courseId = :id").setParameter("id", id).executeUpdate();
+            
+            courseRepository.deleteById(id);
+
+            // Notify active employees
+            try {
+                List<User> employees = userRepository.findAll().stream()
+                        .filter(u -> u.getRole() == Role.EMPLOYEE && u.isActive())
+                        .collect(Collectors.toList());
+
+                for (User emp : employees) {
+                    try {
+                        notificationService.notifyEmployee(
+                            emp,
+                            "quiz_failure",
+                            "Course Removed",
+                            "The course \"" + course.getTitle() + "\" has been deleted and removed by the Administrator.",
+                            null
+                        );
+                    } catch (Exception e) {
+                        System.err.println("[FCM] Failed to notify employee " + emp.getId() + " about removed course: " + e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[AdminCourse] Notification failed: " + e.getMessage());
+            }
+
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 }

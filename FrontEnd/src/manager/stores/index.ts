@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { FilterState, ManagerSettings, Notification, AuditLog, NudgeRecord, CourseReview, LearningGroup } from '../types';
 import { mockSettings, mockNotifications, mockAuditLogs, mockNudgeHistory, mockCourseReviews, mockGroups } from '../data/mockData';
+import { api } from '../../api/client';
 
 // --- Theme Store ---
 interface ThemeState {
@@ -62,21 +63,57 @@ export const useFilterStore = create<FilterStore>((set) => ({
 interface NotificationStore {
   notifications: Notification[];
   unreadCount: number;
-  markRead: (id: string) => void;
-  markAllRead: () => void;
+  loading: boolean;
+  fetchNotifications: () => Promise<void>;
+  markRead: (id: string) => Promise<void>;
+  markAllRead: () => Promise<void>;
 }
 
-export const useNotificationStore = create<NotificationStore>((set) => ({
-  notifications: mockNotifications,
-  unreadCount: mockNotifications.filter(n => !n.read).length,
-  markRead: (id) => set((s) => {
-    const updated = s.notifications.map(n => n.id === id ? { ...n, read: true } : n);
-    return { notifications: updated, unreadCount: updated.filter(n => !n.read).length };
-  }),
-  markAllRead: () => set((s) => ({
-    notifications: s.notifications.map(n => ({ ...n, read: true })),
-    unreadCount: 0,
-  })),
+export const useNotificationStore = create<NotificationStore>((set, get) => ({
+  notifications: [],
+  unreadCount: 0,
+  loading: false,
+  fetchNotifications: async () => {
+    set({ loading: true });
+    try {
+      const response = await api.get('/manager/notifications');
+      const data: Notification[] = response.data.map((n: any) => ({
+        id: String(n.id),
+        type: n.type === 'approved' ? 'Group Update' : n.type === 'change_request' ? 'Compliance Alert' : 'Review Request',
+        title: n.type === 'approved' ? 'Course Approved' : n.type === 'change_request' ? 'Changes Requested' : 'Course Review Request',
+        message: n.message,
+        read: !!n.read,
+        timestamp: n.timestamp,
+        actionUrl: n.linkTo,
+      }));
+      set({ notifications: data, unreadCount: data.filter(n => !n.read).length, loading: false });
+    } catch (err) {
+      console.error('[Manager NotificationStore] Failed to fetch notifications:', err);
+      set({ loading: false });
+    }
+  },
+  markRead: async (id) => {
+    try {
+      await api.post(`/manager/notifications/${id}/read`);
+      set((s) => {
+        const updated = s.notifications.map(n => n.id === id ? { ...n, read: true } : n);
+        return { notifications: updated, unreadCount: updated.filter(n => !n.read).length };
+      });
+    } catch (err) {
+      console.error('[Manager NotificationStore] Failed to mark read:', err);
+    }
+  },
+  markAllRead: async () => {
+    try {
+      await api.post('/manager/notifications/read-all');
+      set((s) => ({
+        notifications: s.notifications.map(n => ({ ...n, read: true })),
+        unreadCount: 0,
+      }));
+    } catch (err) {
+      console.error('[Manager NotificationStore] Failed to mark all read:', err);
+    }
+  },
 }));
 
 // --- Settings Store ---
