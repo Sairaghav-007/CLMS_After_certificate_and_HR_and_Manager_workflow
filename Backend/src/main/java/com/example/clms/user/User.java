@@ -39,6 +39,9 @@ public class User {
     @Column(name = "linkedin_url")
     private String linkedinUrl;
 
+    @Column(name = "fcm_token")
+    private String fcmToken;
+
     public String getEmail() { return email; }
     public Role getRole() { return role; }
     public Long getId() { return id; }
@@ -49,4 +52,6 @@ public class User {
     public String getStatus() { return status; }
     public String getLinkedinUrl() { return linkedinUrl; }
     public void setLinkedinUrl(String linkedinUrl) { this.linkedinUrl = linkedinUrl; }
+    public String getFcmToken() { return fcmToken; }
+    public void setFcmToken(String fcmToken) { this.fcmToken = fcmToken; }
 }

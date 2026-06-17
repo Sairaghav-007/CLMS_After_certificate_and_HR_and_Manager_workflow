@@ -194,4 +194,21 @@ public class AuthService {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Token invalid or expired", e);
         }
     }
+
+    @Transactional
+    public void updateFcmToken(String authHeader, String fcmToken) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+        String token = authHeader.substring(7);
+        try {
+            String email = jwtService.extractEmail(token);
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED, "User not found"));
+            user.setFcmToken(fcmToken);
+            userRepository.save(user);
+        } catch (Exception e) {
+            System.err.println("[FCM] Failed to update FCM token: " + e.getMessage());
+        }
+    }
 }

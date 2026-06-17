@@ -2,6 +2,10 @@ package com.example.clms.course;
 
 import com.example.clms.user.User;
 import com.example.clms.user.UserRepository;
+import com.example.clms.notification.InAppNotification;
+import com.example.clms.notification.InAppNotificationRepository;
+import com.example.clms.manager.NudgeLog;
+import com.example.clms.manager.NudgeLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -28,6 +32,8 @@ public class EmployeeCourseController {
     private final CourseSectionProgressRepository courseSectionProgressRepository;
     private final CertificateRepository certificateRepository;
     private final QuestionRepository questionRepository;
+    private final InAppNotificationRepository inAppNotificationRepository;
+    private final NudgeLogRepository nudgeLogRepository;
 
     private User getAuthenticatedUser() {
         String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
@@ -509,5 +515,65 @@ public class EmployeeCourseController {
             }
         }
         return 5;
+    }
+
+    // ── In-App Notifications (for NotificationStore) ─────────────────────────
+
+    @GetMapping("/notifications")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<Map<String, Object>>> getEmployeeNotifications() {
+        User employee = getAuthenticatedUser();
+        List<InAppNotification> list = inAppNotificationRepository.findByEmployeeIdOrderByCreatedAtDesc(employee.getId());
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (InAppNotification n : list) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", n.getId());
+            map.put("title", n.getTitle());
+            map.put("message", n.getMessage());
+            map.put("type", n.getType());
+            map.put("courseId", n.getCourseId());
+            map.put("isRead", n.isRead());
+            map.put("createdAt", n.getCreatedAt() != null ? n.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
+            result.add(map);
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/notifications/{id}/read")
+    @Transactional
+    public ResponseEntity<Void> markNotificationRead(@PathVariable Long id) {
+        inAppNotificationRepository.findById(id).ifPresent(n -> {
+            n.setRead(true);
+            inAppNotificationRepository.save(n);
+        });
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/notifications/read-all")
+    @Transactional
+    public ResponseEntity<Void> markAllNotificationsRead() {
+        User employee = getAuthenticatedUser();
+        List<InAppNotification> list = inAppNotificationRepository.findByEmployeeIdOrderByCreatedAtDesc(employee.getId());
+        list.forEach(n -> n.setRead(true));
+        inAppNotificationRepository.saveAll(list);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/nudges")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<Map<String, Object>>> getEmployeeNudges() {
+        User employee = getAuthenticatedUser();
+        List<NudgeLog> nudges = nudgeLogRepository.findByEmployeeIdOrderBySentAtDesc(employee.getId());
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (NudgeLog n : nudges) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", n.getId());
+            map.put("courseId", n.getCourseId());
+            map.put("courseTitle", n.getCourseName());
+            map.put("message", n.getMessage());
+            map.put("timestamp", n.getSentAt() != null ? n.getSentAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null);
+            result.add(map);
+        }
+        return ResponseEntity.ok(result);
     }
 }

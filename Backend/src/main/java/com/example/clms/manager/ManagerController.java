@@ -8,6 +8,11 @@ import com.example.clms.user.UserRepository;
 import com.example.clms.course.*;
 import com.example.clms.user.Notification;
 import com.example.clms.user.NotificationRepository;
+import com.example.clms.notification.FcmService;
+import com.example.clms.notification.NotificationService;
+import com.example.clms.notification.InAppNotification;
+import com.example.clms.notification.InAppNotificationRepository;
+import com.example.clms.notification.SesEmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -52,6 +57,18 @@ public class ManagerController {
 
     @Autowired
     private NotificationRepository notificationRepository;
+
+    @Autowired
+    private InAppNotificationRepository inAppNotificationRepository;
+
+    @Autowired
+    private FcmService fcmService;
+
+    @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
+    private SesEmailService sesEmailService;
 
     @Autowired
     private CourseProgressRepository courseProgressRepository;
@@ -622,7 +639,37 @@ public class ManagerController {
 
         nudgeLogRepository.save(log);
 
-        // Broadcast Event
+        // Send FCM push + in-app notification to employee
+        try {
+            notificationService.notifyEmployee(
+                emp,
+                "nudge",
+                "Manager Warning Alert",
+                req.message != null ? req.message : "Your manager has nudged you to complete \"" + course.getTitle() + "\"",
+                String.valueOf(req.courseId)
+            );
+        } catch (Exception e) {
+            System.err.println("[FCM] Failed to send nudge notification: " + e.getMessage());
+        }
+
+        // Send warning email via SES
+        try {
+            User manager = userRepository.findAll().stream()
+                    .filter(u -> u.getRole() == Role.MANAGER)
+                    .findFirst().orElse(null);
+            String managerName = manager != null ? manager.getFullName() : "Your Manager";
+            sesEmailService.sendNudgeWarningEmail(
+                emp.getEmail(),
+                emp.getFullName(),
+                managerName,
+                course.getTitle(),
+                req.message != null ? req.message : "Please complete the required course."
+            );
+        } catch (Exception e) {
+            System.err.println("[SES] Failed to send nudge email: " + e.getMessage());
+        }
+
+        // Broadcast SSE Event
         Map<String, Object> payload = new HashMap<>();
         payload.put("employeeId", req.employeeId);
         payload.put("employeeName", emp.getFullName());

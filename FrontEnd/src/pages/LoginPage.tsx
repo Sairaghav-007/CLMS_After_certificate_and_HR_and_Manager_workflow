@@ -5,6 +5,7 @@ import type { Role } from "../types/auth";
 import { useNavigate } from "react-router-dom";
 import { GraduationCap, Loader2, ShieldCheck, UserPlus, ArrowRight } from "lucide-react";
 import { cn } from "@/shared/utils";
+import { initWebPush } from "../firebase";
 
 const roles: Role[] = ["EMPLOYEE", "MANAGER", "HR", "ADMIN"];
 
@@ -44,6 +45,18 @@ export function LoginPage() {
             });
 
       setAuth(response.data);
+
+      // Register FCM token in background after login
+      const accessToken = response.data.accessToken;
+      if (accessToken) {
+        initWebPush().then((fcmToken) => {
+          if (fcmToken) {
+            api.post("/auth/fcm-token", { fcmToken }, {
+              headers: { Authorization: `Bearer ${accessToken}` }
+            }).catch((err) => console.warn("[FCM] Failed to register token:", err));
+          }
+        }).catch((err) => console.warn("[FCM] initWebPush error:", err));
+      }
 
       if (response.data.role === "EMPLOYEE") navigate("/employee");
       if (response.data.role === "ADMIN") navigate("/admin");

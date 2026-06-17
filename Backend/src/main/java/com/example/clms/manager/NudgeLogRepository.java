@@ -7,4 +7,5 @@ import java.util.List;
 @Repository
 public interface NudgeLogRepository extends JpaRepository<NudgeLog, Long> {
     List<NudgeLog> findAllByOrderBySentAtDesc();
+    List<NudgeLog> findByEmployeeIdOrderBySentAtDesc(Long employeeId);
 }

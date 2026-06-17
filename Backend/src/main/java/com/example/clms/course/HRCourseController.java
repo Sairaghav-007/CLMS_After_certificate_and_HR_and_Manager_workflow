@@ -2,8 +2,11 @@ package com.example.clms.course;
 
 import com.example.clms.user.User;
 import com.example.clms.user.UserRepository;
+import com.example.clms.user.Role;
 import com.example.clms.user.Notification;
 import com.example.clms.user.NotificationRepository;
+import com.example.clms.notification.FcmService;
+import com.example.clms.notification.NotificationService;
 import com.example.clms.manager.AuditLog;
 import com.example.clms.manager.AuditLogRepository;
 import com.example.clms.manager.ChangeRequest;
@@ -37,6 +40,8 @@ public class HRCourseController {
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
+    private final FcmService fcmService;
+    private final NotificationService notificationService;
     private final AuditLogRepository auditLogRepository;
     private final ChangeRequestRepository changeRequestRepository;
     private final CourseContentRepository courseContentRepository;
@@ -312,6 +317,27 @@ public class HRCourseController {
                 .timestamp(LocalDateTime.now())
                 .build();
         auditLogRepository.save(audit);
+
+        // If published, send FCM push notification to all active employees
+        if (isPublished) {
+            final Course publishedCourse = savedCourse;
+            List<User> employees = userRepository.findAll().stream()
+                    .filter(u -> u.getRole() == com.example.clms.user.Role.EMPLOYEE && u.isActive())
+                    .collect(java.util.stream.Collectors.toList());
+            for (User emp : employees) {
+                try {
+                    notificationService.notifyEmployee(
+                        emp,
+                        "published",
+                        "New Course Available",
+                        "A new course \"" + publishedCourse.getTitle() + "\" has been published and assigned to you.",
+                        String.valueOf(publishedCourse.getId())
+                    );
+                } catch (Exception e) {
+                    System.err.println("[FCM] Failed to notify employee " + emp.getId() + ": " + e.getMessage());
+                }
+            }
+        }
 
         // Broadcast real-time SSE event so HR/Manager queues refresh
         Map<String, Object> ssePayload = new HashMap<>();

@@ -48,4 +48,15 @@ public class AuthController {
     ) {
         return authService.updateProfileFromToken(authHeader, request.fullName, request.linkedinUrl);
     }
+
+    @PostMapping("/fcm-token")
+    public org.springframework.http.ResponseEntity<Void> updateFcmToken(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody java.util.Map<String, String> body
+    ) {
+        String token = body.get("fcmToken");
+        System.out.println("[DEBUG] AuthController POST /fcm-token hit with token: " + token + ", authHeader: " + authHeader);
+        authService.updateFcmToken(authHeader, token);
+        return org.springframework.http.ResponseEntity.ok().build();
+    }
 }
