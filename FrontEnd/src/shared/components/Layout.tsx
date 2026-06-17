@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore, useUIStore, useNotificationStore } from '@/shared/store';
 import { ToastContainer } from './Toast';
+import { onForegroundMessage, initWebPush } from '../../firebase';
 import { cn, formatDate } from '@/shared/utils';
 import { api } from '../../api/client';
 
@@ -35,8 +36,9 @@ export function AppLayout() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const { sidebarOpen, setSidebarOpen, toggleSidebar } = useUIStore();
-  const { notifications, markRead, markAllRead, unreadCount } = useNotificationStore();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const { sidebarOpen, setSidebarOpen, toggleSidebar, addToast } = useUIStore();
+  const { notifications, fetchNotifications, markRead, markAllRead, unreadCount } = useNotificationStore();
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -55,6 +57,41 @@ export function AppLayout() {
       setEditLinkedIn(user.linkedinUrl || '');
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && accessToken) {
+      initWebPush().then((fcmToken) => {
+        if (fcmToken) {
+          api.post("/auth/fcm-token", { fcmToken })
+            .catch((err) => console.warn("[FCM] Failed to register token on layout mount:", err));
+        }
+      }).catch((err) => console.warn("[FCM] initWebPush error on layout mount:", err));
+    }
+  }, [user, accessToken]);
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications().catch((err) => console.warn('[Layout] Failed to fetch notifications:', err));
+    }
+  }, [user, fetchNotifications]);
+
+  useEffect(() => {
+    const unsubscribe = onForegroundMessage((payload) => {
+      console.log('[Layout] Foreground message received:', payload);
+      if (payload.notification) {
+        addToast({
+          type: 'info',
+          title: payload.notification.title || 'New Notification',
+          message: payload.notification.body || '',
+        });
+      }
+      fetchNotifications().catch((err) => console.warn('[Layout] Failed to refresh notifications:', err));
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [addToast, fetchNotifications]);
 
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);

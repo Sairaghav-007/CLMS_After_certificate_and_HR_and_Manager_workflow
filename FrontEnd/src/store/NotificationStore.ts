@@ -1,50 +1,107 @@
 import { create } from 'zustand';
 import { type Notification, NotificationType } from '@/shared/types';
+import { api } from '../api/client';
+import { useAuthStore } from './AuthStore';
 
 interface NotificationState {
   notifications: Notification[];
-  setNotifications: (notifications: Notification[]) => void;
-  markRead: (id: string) => void;
-  markAllRead: () => void;
+  loading: boolean;
+  fetchNotifications: () => Promise<void>;
+  markRead: (id: string) => Promise<void>;
+  markAllRead: () => Promise<void>;
   addNotification: (notification: Notification) => void;
   unreadCount: () => number;
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: 'notif-1',
-    type: NotificationType.COURSE_ASSIGNED,
-    title: 'New Mandatory Course Assigned',
-    message: 'You have been assigned: Cybersecurity Essentials for Developers. Complete it before the deadline.',
-    courseId: '1',
-    isRead: false,
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: 'notif-2',
-    type: NotificationType.DUE_DATE_REMINDER,
-    title: 'Course Deadline Approaching',
-    message: 'Your course: Agile Project Management Mastery is due in 3 days.',
-    courseId: '2',
-    isRead: false,
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-  },
-];
-
 export const useNotificationStore = create<NotificationState>()((set, get) => ({
-  notifications: mockNotifications,
-  setNotifications: (notifications) => set({ notifications }),
-  markRead: (id) =>
-    set((state) => ({
-      notifications: state.notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
-    })),
-  markAllRead: () =>
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
-    })),
+  notifications: [],
+  loading: false,
+
+  fetchNotifications: async () => {
+    const user = useAuthStore.getState().user;
+    if (!user) {
+      set({ notifications: [] });
+      return;
+    }
+
+    set({ loading: true });
+    try {
+      if (user.role === 'EMPLOYEE') {
+        const response = await api.get('/employee/notifications');
+        const formatted: Notification[] = response.data.map((n: any) => ({
+          id: String(n.id),
+          type: n.type || NotificationType.COURSE_ASSIGNED,
+          title: n.title || 'Notification',
+          message: n.message || '',
+          courseId: n.courseId ? String(n.courseId) : undefined,
+          isRead: !!n.isRead,
+          createdAt: n.createdAt ? new Date(n.createdAt).toISOString() : new Date().toISOString(),
+        }));
+        set({ notifications: formatted, loading: false });
+      } else if (user.role === 'HR') {
+        const response = await api.get('/hr/notifications');
+        const formatted: Notification[] = response.data.map((n: any) => ({
+          id: String(n.id),
+          type: n.type === 'approved' ? NotificationType.CERTIFICATE_GENERATED : NotificationType.COURSE_ASSIGNED,
+          title: n.type === 'approved' ? 'Course Approved' : n.type === 'change_request' ? 'Changes Requested' : 'HR Notification',
+          message: n.message || '',
+          courseId: n.courseId ? String(n.courseId) : undefined,
+          isRead: !!n.read,
+          createdAt: n.timestamp ? new Date(n.timestamp).toISOString() : new Date().toISOString(),
+        }));
+        set({ notifications: formatted, loading: false });
+      } else {
+        set({ notifications: [], loading: false });
+      }
+    } catch (err) {
+      console.error('[NotificationStore] Failed to fetch notifications:', err);
+      set({ loading: false });
+    }
+  },
+
+  markRead: async (id) => {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    try {
+      if (user.role === 'EMPLOYEE') {
+        await api.post(`/employee/notifications/${id}/read`);
+      } else if (user.role === 'HR') {
+        await api.post(`/hr/notifications/${id}/read`);
+      }
+
+      set((state) => ({
+        notifications: state.notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+      }));
+    } catch (err) {
+      console.error('[NotificationStore] Failed to mark notification as read:', err);
+    }
+  },
+
+  markAllRead: async () => {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    try {
+      if (user.role === 'EMPLOYEE') {
+        await api.post('/employee/notifications/read-all');
+      } else if (user.role === 'HR') {
+        const unread = get().notifications.filter((n) => !n.isRead);
+        await Promise.all(unread.map((n) => api.post(`/hr/notifications/${n.id}/read`)));
+      }
+
+      set((state) => ({
+        notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
+      }));
+    } catch (err) {
+      console.error('[NotificationStore] Failed to mark all notifications as read:', err);
+    }
+  },
+
   addNotification: (notification) =>
     set((state) => ({
       notifications: [notification, ...state.notifications],
     })),
+
   unreadCount: () => get().notifications.filter((n) => !n.isRead).length,
 }));
