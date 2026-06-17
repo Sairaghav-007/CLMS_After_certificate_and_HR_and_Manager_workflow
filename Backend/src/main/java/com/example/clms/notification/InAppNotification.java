@@ -1,4 +1,4 @@
-﻿package com.example.clms.notification;
+package com.example.clms.notification;
 
 import jakarta.persistence.*;
 import lombok.*;

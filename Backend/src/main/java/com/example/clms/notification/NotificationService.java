@@ -1,4 +1,4 @@
-﻿package com.example.clms.notification;
+package com.example.clms.notification;
 
 import com.example.clms.user.User;
 import lombok.RequiredArgsConstructor;
