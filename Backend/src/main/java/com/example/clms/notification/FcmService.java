@@ -47,6 +47,8 @@ public class FcmService {
         String[] paths = {
             "src/main/resources/serviceAccountKey.json",
             "../serviceAccountKey.json",
+            "../FrontEnd/serviceAccountKey.json",
+            "../Backend/src/main/resources/serviceAccountKey.json",
             "serviceAccountKey.json"
         };
         for (String path : paths) {

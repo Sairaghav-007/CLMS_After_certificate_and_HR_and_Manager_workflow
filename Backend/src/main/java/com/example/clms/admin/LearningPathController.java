@@ -56,7 +56,7 @@ public class LearningPathController {
                 try {
                     notificationService.notifyEmployee(
                         emp,
-                        "course_assigned",
+                        "learning_path",
                         "New Learning Path Assigned",
                         "You have been assigned the learning path \"" + saved.getName() + "\".",
                         null

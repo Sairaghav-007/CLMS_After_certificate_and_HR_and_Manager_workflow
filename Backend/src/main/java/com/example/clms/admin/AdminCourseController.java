@@ -104,7 +104,7 @@ public class AdminCourseController {
                     try {
                         notificationService.notifyEmployee(
                             emp,
-                            "quiz_failure",
+                            "course_removed",
                             "Course Removed",
                             "The course \"" + course.getTitle() + "\" has been deleted and removed by the Administrator.",
                             null

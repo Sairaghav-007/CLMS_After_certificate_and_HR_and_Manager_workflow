@@ -27,7 +27,21 @@ public class SesEmailService {
     @PostConstruct
     public void init() {
         try {
-            Map<String, String> envVars = loadEnvFile("d:/clms-virtusa/.env");
+            String[] paths = {
+                "../FrontEnd/.env",
+                "../.env",
+                ".env",
+                "src/main/resources/.env"
+            };
+            Map<String, String> envVars = new java.util.HashMap<>();
+            for (String path : paths) {
+                Map<String, String> loaded = loadEnvFile(path);
+                if (!loaded.isEmpty()) {
+                    envVars = loaded;
+                    System.out.println("[SES] Loaded env vars from path: " + path);
+                    break;
+                }
+            }
 
             String region = envVars.getOrDefault("VITE_AWS_REGION", "ap-southeast-2");
             String accessKeyId = envVars.get("VITE_AWS_ACCESS_KEY_ID");

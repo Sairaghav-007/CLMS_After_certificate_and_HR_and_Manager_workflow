@@ -337,10 +337,73 @@ public class ManagerController {
 
     // Get Full Course Detail for Manager Review
     @GetMapping("/course-detail/{id}")
-    @Transactional(readOnly = true)
+    @Transactional
     public ResponseEntity<Map<String, Object>> getCourseDetail(@PathVariable("id") Long courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new RuntimeException("Course not found: " + courseId));
+
+        if ("PENDING_MANAGER_REVIEW".equalsIgnoreCase(course.getStatus())) {
+            course.setStatus("ON_REVIEW");
+            courseRepository.save(course);
+
+            // Audit log
+            AuditLog log = AuditLog.builder()
+                    .courseId(courseId)
+                    .username("Sarah Mitchell")
+                    .action("Started Review")
+                    .status("ON_REVIEW")
+                    .comment("Manager started reviewing the course content.")
+                    .timestamp(LocalDateTime.now())
+                    .build();
+            auditLogRepository.save(log);
+
+            // Notify HR
+            User hrUser = userRepository.findAll().stream()
+                    .filter(u -> u.getRole() == Role.HR)
+                    .findFirst()
+                    .orElse(null);
+            
+            if (hrUser != null) {
+                String msg = "Manager started to review \"" + course.getTitle() + "\"";
+                notificationRepository.save(
+                        Notification.builder()
+                                .senderId(3L) // Manager Sarah Mitchell id
+                                .receiverId(hrUser.getId())
+                                .message(msg)
+                                .isRead(false)
+                                .createdAt(LocalDateTime.now())
+                                .type("submitted")
+                                .courseId(courseId)
+                                .courseTitle(course.getTitle())
+                                .build()
+                );
+
+                // Send FCM Push
+                if (hrUser.getFcmToken() != null && !hrUser.getFcmToken().trim().isEmpty()) {
+                    try {
+                        Map<String, Object> fcmData = new HashMap<>();
+                        fcmData.put("type", "submitted");
+                        fcmData.put("courseId", String.valueOf(courseId));
+                        fcmService.sendPushNotification(
+                            hrUser.getFcmToken(),
+                            "Course Under Review",
+                            msg,
+                            fcmData
+                        );
+                    } catch (Exception e) {
+                        System.err.println("[FCM] Failed to send review start push: " + e.getMessage());
+                    }
+                }
+            }
+
+            // Broadcast Real-time Event
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("courseId", courseId);
+            payload.put("courseName", course.getTitle());
+            payload.put("status", "ON_REVIEW");
+            payload.put("action", "STARTED_REVIEW");
+            sseService.broadcast("course_review", payload);
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("id", String.valueOf(course.getId()));
@@ -494,8 +557,8 @@ public class ManagerController {
         
         if (hrUser != null) {
             String msg = "READY_TO_PUBLISH".equals(nextStatus)
-                    ? "Manager approved \"" + course.getTitle() + "\""
-                    : "Manager started reviewing \"" + course.getTitle() + "\"";
+                    ? "Manager has accepted \"" + course.getTitle() + "\""
+                    : "Manager started to review \"" + course.getTitle() + "\"";
             String nType = "READY_TO_PUBLISH".equals(nextStatus) ? "approved" : "submitted";
 
             notificationRepository.save(
@@ -592,7 +655,7 @@ public class ManagerController {
                     Notification.builder()
                             .senderId(3L) // Manager Sarah Mitchell id
                             .receiverId(hrUser.getId())
-                            .message("Manager rejected \"" + course.getTitle() + "\"")
+                            .message("Manager has rejected \"" + course.getTitle() + "\"")
                             .isRead(false)
                             .createdAt(LocalDateTime.now())
                             .type("change_request")

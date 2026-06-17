@@ -28,22 +28,37 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
     try {
       if (user.role === 'EMPLOYEE') {
         const response = await api.get('/employee/notifications');
-        const formatted: Notification[] = response.data.map((n: any) => ({
-          id: String(n.id),
-          type: n.type || NotificationType.COURSE_ASSIGNED,
-          title: n.title || 'Notification',
-          message: n.message || '',
-          courseId: n.courseId ? String(n.courseId) : undefined,
-          isRead: !!n.isRead,
-          createdAt: n.createdAt ? new Date(n.createdAt).toISOString() : new Date().toISOString(),
-        }));
+        const formatted: Notification[] = response.data.map((n: any) => {
+          let mappedType = NotificationType.COURSE_ASSIGNED;
+          if (n.type === 'nudge' || n.type === 'due_date_reminder') {
+            mappedType = NotificationType.DUE_DATE_REMINDER;
+          } else if (n.type === 'quiz_failure' || n.type === 'course_removed') {
+            mappedType = NotificationType.QUIZ_FAILURE;
+          } else if (n.type === 'quiz_success') {
+            mappedType = NotificationType.QUIZ_SUCCESS;
+          } else if (n.type === 'certificate_generated') {
+            mappedType = NotificationType.CERTIFICATE_GENERATED;
+          }
+          return {
+            id: String(n.id),
+            type: mappedType,
+            title: n.title || 'Notification',
+            message: n.message || '',
+            courseId: n.courseId ? String(n.courseId) : undefined,
+            isRead: !!n.isRead,
+            createdAt: n.createdAt ? new Date(n.createdAt).toISOString() : new Date().toISOString(),
+          };
+        });
         set({ notifications: formatted, loading: false });
       } else if (user.role === 'HR') {
         const response = await api.get('/hr/notifications');
         const formatted: Notification[] = response.data.map((n: any) => ({
           id: String(n.id),
           type: n.type === 'approved' ? NotificationType.CERTIFICATE_GENERATED : NotificationType.COURSE_ASSIGNED,
-          title: n.type === 'approved' ? 'Course Approved' : n.type === 'change_request' ? 'Changes Requested' : 'HR Notification',
+          title: n.type === 'approved' ? 'Course Approved' 
+               : n.type === 'change_request' ? 'Changes Requested' 
+               : n.type === 'submitted' ? 'Manager Started Review' 
+               : 'HR Notification',
           message: n.message || '',
           courseId: n.courseId ? String(n.courseId) : undefined,
           isRead: !!n.read,

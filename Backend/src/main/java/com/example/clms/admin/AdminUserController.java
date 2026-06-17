@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.clms.notification.SesEmailService;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -21,6 +23,9 @@ public class AdminUserController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private SesEmailService sesEmailService;
 
     public static class AccountDto {
         public String uniqueId;
@@ -111,6 +116,14 @@ public class AdminUserController {
                 .build();
 
         User savedUser = userRepository.save(user);
+
+        // Send welcome email via SES
+        try {
+            sesEmailService.sendWelcomeEmail(savedUser.getEmail(), savedUser.getFullName(), "password123");
+        } catch (Exception e) {
+            System.err.println("[SES] Failed to send welcome email to " + savedUser.getEmail() + ": " + e.getMessage());
+        }
+
         return new AccountDto(savedUser);
     }
 

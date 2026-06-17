@@ -331,7 +331,7 @@ public class HRCourseController {
                         emp,
                         "published",
                         "New Course Available",
-                        "A new course \"" + publishedCourse.getTitle() + "\" has been published and assigned to you.",
+                        "New Course has been assigned with name: " + publishedCourse.getTitle(),
                         String.valueOf(publishedCourse.getId())
                     );
                 } catch (Exception e) {
@@ -350,9 +350,9 @@ public class HRCourseController {
                 try {
                     notificationService.notifyEmployee(
                         emp,
-                        "quiz_failure",
+                        "course_removed",
                         "Course Unpublished",
-                        "The course \"" + unpublishedCourse.getTitle() + "\" has been unpublished/withdrawn by HR.",
+                        "This course has been unpublished by the HR: \"" + unpublishedCourse.getTitle() + "\"",
                         null
                     );
                 } catch (Exception e) {
@@ -538,7 +538,7 @@ public class HRCourseController {
                     .message("HR submitted course \"" + course.getTitle() + "\" for review.")
                     .isRead(false)
                     .createdAt(LocalDateTime.now())
-                    .type("change_request") // Maps to compliance / review request in frontend
+                    .type("review_request")
                     .courseId(courseId)
                     .courseTitle(course.getTitle())
                     .build();
