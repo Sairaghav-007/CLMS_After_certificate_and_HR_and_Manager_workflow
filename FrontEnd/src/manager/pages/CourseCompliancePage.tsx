@@ -32,19 +32,34 @@ export default function CourseCompliancePage() {
   const [loading, setLoading] = useState(true);
   const addLog = useAuditStore(s => s.addLog);
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/manager/compliance'),
-      api.get('/manager/compliance/records'),
-    ]).then(([statsRes, recordsRes]) => {
+  const loadData = async (showSkeleton = true) => {
+    if (showSkeleton) setLoading(true);
+    try {
+      const [statsRes, recordsRes] = await Promise.all([
+        api.get('/manager/compliance'),
+        api.get('/manager/compliance/records'),
+      ]);
       setStats({
         complianceRate: statsRes.data.complianceRate ?? 0,
         pendingRate: statsRes.data.pendingRate ?? 0,
         avgPassingScore: statsRes.data.avgPassingScore ?? 0,
       });
       setRecords(recordsRes.data);
-    }).catch(err => console.error('Failed to load compliance data:', err))
-      .finally(() => setLoading(false));
+    } catch (err) {
+      console.error('Failed to load compliance data:', err);
+    } finally {
+      if (showSkeleton) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData(true);
+
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const filteredRecords = useMemo(() => {

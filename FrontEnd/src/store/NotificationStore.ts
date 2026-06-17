@@ -65,6 +65,21 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
           createdAt: n.timestamp ? new Date(n.timestamp).toISOString() : new Date().toISOString(),
         }));
         set({ notifications: formatted, loading: false });
+      } else if (user.role === 'MANAGER') {
+        const response = await api.get('/manager/notifications');
+        const formatted: Notification[] = response.data.map((n: any) => ({
+          id: String(n.id),
+          type: n.type === 'approved' ? NotificationType.CERTIFICATE_GENERATED : NotificationType.COURSE_ASSIGNED,
+          title: n.type === 'approved' ? 'Course Approved' 
+               : n.type === 'change_request' ? 'Changes Requested' 
+               : n.type === 'submitted' ? 'Course Review Request' 
+               : 'Manager Notification',
+          message: n.message || '',
+          courseId: n.courseId ? String(n.courseId) : undefined,
+          isRead: !!n.read,
+          createdAt: n.timestamp ? new Date(n.timestamp).toISOString() : new Date().toISOString(),
+        }));
+        set({ notifications: formatted, loading: false });
       } else {
         set({ notifications: [], loading: false });
       }
@@ -83,6 +98,8 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
         await api.post(`/employee/notifications/${id}/read`);
       } else if (user.role === 'HR') {
         await api.post(`/hr/notifications/${id}/read`);
+      } else if (user.role === 'MANAGER') {
+        await api.post(`/manager/notifications/${id}/read`);
       }
 
       set((state) => ({
@@ -103,6 +120,8 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
       } else if (user.role === 'HR') {
         const unread = get().notifications.filter((n) => !n.isRead);
         await Promise.all(unread.map((n) => api.post(`/hr/notifications/${n.id}/read`)));
+      } else if (user.role === 'MANAGER') {
+        await api.post('/manager/notifications/read-all');
       }
 
       set((state) => ({

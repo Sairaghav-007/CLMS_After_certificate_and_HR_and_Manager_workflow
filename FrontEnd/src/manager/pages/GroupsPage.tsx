@@ -4,7 +4,7 @@ import {
   Plus, MoreVertical,
   Users, BookOpen, 
   BarChart3, CheckCircle2, 
-  Calendar, ShieldCheck, FileText
+  Calendar, ShieldCheck, FileText, Trash2
 } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
@@ -53,7 +53,23 @@ export default function GroupsPage() {
     // Fetch real courses and employees for wizard
     api.get('/employee/courses').then(res => setAvailableCourses(res.data)).catch(() => {});
     api.get('/manager/employees').then(res => setAvailableEmployees(res.data)).catch(() => {});
+
+    const interval = setInterval(() => {
+      fetchGroups();
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  // Update selectedGroup reference if it changes during polling
+  useEffect(() => {
+    if (selectedGroup && groups.length > 0) {
+      const updated = groups.find(g => g.id === selectedGroup.id);
+      if (updated) {
+        setSelectedGroup(updated);
+      }
+    }
+  }, [groups]);
 
   const handleCreateGroup = async () => {
     try {
@@ -88,6 +104,21 @@ export default function GroupsPage() {
     setNewGroupEmployees([]);
     setTargetAvgScore(80);
     setTargetPassingScore(70);
+  };
+
+  const handleDeleteGroup = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete learning group "${name}"? This cannot be undone.`)) {
+      try {
+        await api.delete(`/manager/groups/${id}`);
+        addToast({ type: 'success', title: 'Group Deleted', message: `Learning group "${name}" was deleted.` });
+        if (selectedGroup?.id === id) {
+          setSelectedGroup(null);
+        }
+        fetchGroups();
+      } catch (error) {
+        addToast({ type: 'error', title: 'Delete Failed', message: 'Could not delete learning group.' });
+      }
+    }
   };
 
   const groupComplianceData = useMemo(() => {
@@ -178,8 +209,15 @@ export default function GroupsPage() {
                 <div className="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center text-white shadow-lg">
                   <Users className="w-6 h-6" />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <StatusBadge status={group.status} />
+                  <button
+                    onClick={() => handleDeleteGroup(group.id, group.name)}
+                    className="p-1 rounded-lg text-surface-400 hover:text-danger-600 hover:bg-danger-50 transition-colors cursor-pointer"
+                    title="Delete Cohort"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
               
@@ -404,6 +442,79 @@ export default function GroupsPage() {
                      <p className="text-[10px] mt-1">Cohort-specific topic scores will display here.</p>
                    </div>
                 </div>
+             </div>
+
+             {/* Enrolled Employees Section */}
+             <div className="space-y-4">
+                <h4 className="text-sm font-bold text-surface-900">Enrolled Employees ({selectedGroup.employees ? selectedGroup.employees.length : 0})</h4>
+                <div className="border border-surface-200 rounded-2xl overflow-hidden bg-white">
+                   <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                         <thead>
+                            <tr className="border-b border-surface-200 bg-surface-50 text-[10px] font-bold text-surface-500 uppercase tracking-wider">
+                               <th className="px-4 py-3">Employee Name</th>
+                               <th className="px-4 py-3">Department</th>
+                               <th className="px-4 py-3">Completed/Assigned</th>
+                               <th className="px-4 py-3">Avg Quiz Score</th>
+                               <th className="px-4 py-3">Status</th>
+                            </tr>
+                         </thead>
+                         <tbody className="divide-y divide-surface-100 text-xs text-surface-700">
+                            {!selectedGroup.employees || selectedGroup.employees.length === 0 ? (
+                               <tr>
+                                  <td colSpan={5} className="px-4 py-8 text-center text-surface-400 font-semibold">
+                                     No employees enrolled in this group.
+                                  </td>
+                               </tr>
+                            ) : (
+                               selectedGroup.employees.map((empId: string) => {
+                                  const emp = availableEmployees.find(e => String(e.id) === String(empId));
+                                  if (!emp) {
+                                     return (
+                                        <tr key={empId}>
+                                           <td className="px-4 py-3 font-semibold text-surface-400">Employee ID: {empId}</td>
+                                           <td className="px-4 py-3">—</td>
+                                           <td className="px-4 py-3">—</td>
+                                           <td className="px-4 py-3">—</td>
+                                           <td className="px-4 py-3">—</td>
+                                        </tr>
+                                     );
+                                  }
+                                  return (
+                                     <tr key={emp.id} className="hover:bg-surface-50/50 transition-colors">
+                                        <td className="px-4 py-3 font-bold text-surface-900">{emp.name}</td>
+                                        <td className="px-4 py-3">{emp.department}</td>
+                                        <td className="px-4 py-3 font-semibold">
+                                           {emp.completedCourses} / {emp.assignedCourses}
+                                        </td>
+                                        <td className="px-4 py-3 font-semibold">{emp.averageQuizScore}%</td>
+                                        <td className="px-4 py-3">
+                                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                                              emp.status === 'Compliant' ? 'bg-success-50 text-success-700 border border-success-100' :
+                                              emp.status === 'At Risk' ? 'bg-warning-50 text-warning-700 border border-warning-105' :
+                                              'bg-danger-50 text-danger-700 border border-danger-100'
+                                           }`}>
+                                              {emp.status}
+                                           </span>
+                                        </td>
+                                     </tr>
+                                  );
+                               })
+                            )}
+                         </tbody>
+                      </table>
+                   </div>
+                </div>
+             </div>
+
+             {/* Delete Group Action */}
+             <div className="pt-4 border-t border-surface-100 flex justify-end">
+                <button
+                   onClick={() => handleDeleteGroup(selectedGroup.id, selectedGroup.name)}
+                   className="flex items-center gap-2 px-4 py-2 bg-danger-600 hover:bg-danger-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md shadow-danger-500/10"
+                >
+                   <Trash2 className="w-3.5 h-3.5" /> Delete Cohort
+                </button>
              </div>
           </div>
         )}

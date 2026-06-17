@@ -1,8 +1,6 @@
 package com.example.clms.admin;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,4 +17,9 @@ public class LearningPath {
     private String description;
     private int duration; // in hours
     private String department;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "learning_path_courses", joinColumns = @JoinColumn(name = "path_id"))
+    @Column(name = "course_id")
+    private java.util.List<Long> courseIds = new java.util.ArrayList<>();
 }

@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users, BookOpen, CheckCircle2, Clock, AlertTriangle,
-  TrendingUp, Award, BarChart3
+  TrendingUp, Award, BarChart3, Mail, User, Calendar, Link2 as Linkedin, Loader2
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { KPICard, PageHeader } from '../components/ui';
+import { KPICard, PageHeader, Drawer, StatusBadge, ProgressBar } from '../components/ui';
 import { api } from '@/api/client';
 
 export default function DashboardPage() {
@@ -16,6 +16,28 @@ export default function DashboardPage() {
   const [activity, setActivity] = useState<any[]>([]);
   const [trend, setTrend] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null);
+  const [employeeCourses, setEmployeeCourses] = useState<any[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+
+  useEffect(() => {
+    if (selectedEmployee) {
+      setLoadingCourses(true);
+      api.get(`/manager/employees/${selectedEmployee.id}/courses`)
+        .then(res => {
+          setEmployeeCourses(res.data);
+        })
+        .catch(err => {
+          console.error("Failed to load employee courses", err);
+        })
+        .finally(() => {
+          setLoadingCourses(false);
+        });
+    } else {
+      setEmployeeCourses([]);
+    }
+  }, [selectedEmployee]);
 
   const fetchData = async () => {
     try {
@@ -54,8 +76,14 @@ export default function DashboardPage() {
       fetchData();
     };
 
+    // Polling backup
+    const interval = setInterval(() => {
+      fetchData();
+    }, 15000);
+
     return () => {
       eventSource.close();
+      clearInterval(interval);
     };
   }, []);
 
@@ -245,14 +273,15 @@ export default function DashboardPage() {
         className="glass-card rounded-card p-6"
       >
         <h3 className="text-2xl font-bold text-surface-900 mb-6 tracking-tight">Real-time Team Activity</h3>
-        <div className="space-y-3">
-          {activity.slice(0, 6).map((emp, i) => (
+        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+          {activity.map((emp, i) => (
             <motion.div
               key={emp.id}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.6 + i * 0.05 }}
-              className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-50 transition-colors"
+              onClick={() => setSelectedEmployee(emp)}
+              className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-100/80 transition-colors cursor-pointer"
             >
               <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                 {emp.avatar}
@@ -272,6 +301,122 @@ export default function DashboardPage() {
           ))}
         </div>
       </motion.div>
+
+      {/* Employee Detail Drawer */}
+      <Drawer
+        isOpen={!!selectedEmployee}
+        onClose={() => setSelectedEmployee(null)}
+        title="Employee Details"
+      >
+        {selectedEmployee && (
+          <div className="space-y-6 text-left">
+            {/* Employee Info */}
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-primary-100 text-primary-750 flex items-center justify-center text-xl font-bold shadow-lg shadow-primary-500/10">
+                {selectedEmployee.avatar || 'E'}
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-surface-900">{selectedEmployee.name}</h3>
+                <p className="text-xs text-surface-500 mb-1">{selectedEmployee.id} • {selectedEmployee.designation || 'Software Engineer'}</p>
+                <StatusBadge status={selectedEmployee.status} size="md" />
+              </div>
+            </div>
+
+            {/* Info Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { icon: Mail, label: 'Email', value: selectedEmployee.email },
+                { icon: User, label: 'Department', value: selectedEmployee.department },
+                { icon: Award, label: 'Designation', value: selectedEmployee.designation || 'Software Developer' },
+                { icon: Calendar, label: 'Joining Date', value: selectedEmployee.joiningDate || '2026-03-01' },
+              ].map(item => (
+                <div key={item.label} className="p-3 rounded-xl bg-surface-50">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <item.icon className="w-3 h-3 text-surface-400" />
+                    <span className="text-[10px] text-surface-500 uppercase tracking-wider font-medium">{item.label}</span>
+                  </div>
+                  <p className="text-xs font-semibold text-surface-900 truncate">{item.value}</p>
+                </div>
+              ))}
+
+              {/* LinkedIn URL Link display */}
+              <div className="p-3 rounded-xl bg-surface-50 col-span-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Linkedin className="w-4 h-4 text-primary-500" />
+                  <div>
+                    <span className="text-[10px] text-surface-500 uppercase tracking-wider font-medium block">LinkedIn Profile</span>
+                    {selectedEmployee.linkedinUrl ? (
+                      <a 
+                        href={selectedEmployee.linkedinUrl}
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-xs font-bold text-primary-600 hover:text-primary-700 hover:underline truncate max-w-[280px] block"
+                      >
+                        {selectedEmployee.linkedinUrl}
+                      </a>
+                    ) : (
+                      <span className="text-xs text-surface-400 font-semibold">No URL provided</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Learning Summary */}
+            <div>
+              <h4 className="text-sm font-bold text-surface-900 mb-3">Learning Summary</h4>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'Assigned', value: selectedEmployee.assignedCourses, icon: BookOpen, color: 'text-primary-500' },
+                  { label: 'Completed', value: selectedEmployee.completedCourses, icon: CheckCircle2, color: 'text-accent-500' },
+                  { label: 'In Progress', value: selectedEmployee.inProgressCourses, icon: Clock, color: 'text-warning-500' },
+                  { label: 'Certificates', value: selectedEmployee.certificatesEarned || 0, icon: Award, color: 'text-primary-500' },
+                  { label: 'Hours', value: selectedEmployee.learningHours || 0, icon: Clock, color: 'text-cyan-500' },
+                  { label: 'Avg Score', value: `${selectedEmployee.averageQuizScore || 0}%`, icon: BarChart3, color: 'text-amber-500' },
+                ].map(item => (
+                  <div key={item.label} className="text-center p-3 rounded-xl bg-surface-50">
+                    <item.icon className={`w-4 h-4 mx-auto mb-1 ${item.color}`} />
+                    <p className="text-lg font-bold text-surface-900">{item.value}</p>
+                    <p className="text-[10px] text-surface-500">{item.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Course Progress */}
+            <div>
+              <h4 className="text-sm font-bold text-surface-900 mb-3">Course Progress</h4>
+              {loadingCourses ? (
+                <div className="py-6 text-center text-xs text-surface-500 font-semibold">
+                  <Loader2 className="animate-spin w-5 h-5 mx-auto mb-2 text-primary-500" />
+                  <span>Loading progress records...</span>
+                </div>
+              ) : employeeCourses.length === 0 ? (
+                <div className="py-4 text-center text-xs text-surface-450 font-semibold bg-surface-50 rounded-xl">
+                  No courses assigned to this employee.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {employeeCourses.map(course => (
+                    <div key={course.courseId} className="p-3 rounded-xl bg-surface-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-surface-900">{course.courseName}</p>
+                        <StatusBadge status={course.status} />
+                      </div>
+                      <ProgressBar
+                        value={course.completionPercent}
+                        color={course.status === 'Completed' ? 'bg-accent-500' : course.status === 'Overdue' ? 'bg-danger-500' : 'bg-primary-500'}
+                        size="md"
+                      />
+                      <p className="text-[10px] text-surface-500 mt-1">Due: {course.dueDate}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 }

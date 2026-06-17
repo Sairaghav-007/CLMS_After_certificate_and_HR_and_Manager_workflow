@@ -191,77 +191,87 @@ export function EmployeeCoursesPage() {
   const [searchInput, setSearchInput] = useState(filters.search);
   const [loading, setLoading] = useState(true);
   const debouncedSearch = useDebounce(searchInput, 300);
-
-  // Fetch from SpringBoot on search parameter change
+  // Fetch from SpringBoot on search parameter change & poll silently every 15 seconds
   useEffect(() => {
-    setLoading(true);
-    api
-      .get("/employee/courses", { params: { search: debouncedSearch } })
-      .then((res) => {
-        const localCourses = useCourseStore.getState().courses;
-        const mapped = res.data.map((bc: any) => {
-          const existing = localCourses.find((e) => e.id === String(bc.id));
+    const loadCourses = (showSkeleton: boolean) => {
+      if (showSkeleton) setLoading(true);
+      return api
+        .get("/employee/courses", { params: { search: debouncedSearch } })
+        .then((res) => {
+          const localCourses = useCourseStore.getState().courses;
+          const mapped = res.data.map((bc: any) => {
+            const existing = localCourses.find((e) => e.id === String(bc.id));
 
-          const categoryMap: Record<string, CourseCategory> = {
-            MANDATORY: CourseCategory.MANDATORY,
-            COMPLIANCE: CourseCategory.MANDATORY,
-            TECHNICAL: CourseCategory.ELECTIVE,
-            ELECTIVE: CourseCategory.ELECTIVE,
-            HR: CourseCategory.DEPARTMENT,
-            'DEPARTMENT-ORIENTED': CourseCategory.DEPARTMENT,
-            DEPARTMENT: CourseCategory.DEPARTMENT,
-          };
+            const categoryMap: Record<string, CourseCategory> = {
+              MANDATORY: CourseCategory.MANDATORY,
+              COMPLIANCE: CourseCategory.MANDATORY,
+              TECHNICAL: CourseCategory.ELECTIVE,
+              ELECTIVE: CourseCategory.ELECTIVE,
+              HR: CourseCategory.DEPARTMENT,
+              'DEPARTMENT-ORIENTED': CourseCategory.DEPARTMENT,
+              DEPARTMENT: CourseCategory.DEPARTMENT,
+            };
 
-          const mappedCategory = categoryMap[bc.category?.toUpperCase().replace(/ /g, '-')] || CourseCategory.ELECTIVE;
-          const duration = existing?.duration || 6;
+            const mappedCategory = categoryMap[bc.category?.toUpperCase().replace(/ /g, '-')] || CourseCategory.ELECTIVE;
+            const duration = existing?.duration || 6;
 
-          return {
-            id: String(bc.id),
-            title: bc.title,
-            description: bc.description,
-            thumbnail: bc.thumbnail || "",
-            category: mappedCategory,
-            instructor: existing?.instructor || {
-              id: "INS-DEFAULT",
-              name: "Corporate Trainer",
-              title: "L&D Director",
-              avatar: "",
-              bio: "Acme Corp corporate compliance and technology instructor.",
-            },
-            duration,
-            totalModules: existing?.modules?.length || 2,
-            totalAssessments: 1,
-            progress: bc.progressPercent !== undefined ? bc.progressPercent : (existing?.progress || 0),
-            status: bc.status?.toLowerCase() === "completed" ? CompletionStatus.COMPLETED : 
-                    bc.status?.toLowerCase() === "in_progress" ? CompletionStatus.IN_PROGRESS : 
-                    (existing?.status || CompletionStatus.NOT_STARTED),
-            dueDate: bc.dueDate,
-            assignedDate: "2026-05-15",
-            lastUpdated: "2026-06-01",
-            objectives: existing?.objectives || [
-              "Understand regulatory compliance and security parameters.",
-              "Incorporate standard processes into daily activities.",
-              "Verify controls are active and report performance issues."
-            ],
-            learningOutcomes: existing?.learningOutcomes || [
-              "Outline key guidelines of the corporate subject matter.",
-              "Recognize and resolve non-compliance events.",
-              "Implement secure coding workflows."
-            ],
-            completionCriteria: "Complete all sections and score 80% on final quiz.",
-            passingPercentage: 80,
-            modules: existing?.modules || [],
-            assessment: existing?.assessment,
-            certificate: existing?.certificate,
-            popularity: 90,
-            department: "Engineering",
-          };
+            return {
+              id: String(bc.id),
+              title: bc.title,
+              description: bc.description,
+              thumbnail: bc.thumbnail || "",
+              category: mappedCategory,
+              instructor: existing?.instructor || {
+                id: "INS-DEFAULT",
+                name: "Corporate Trainer",
+                title: "L&D Director",
+                avatar: "",
+                bio: "Acme Corp corporate compliance and technology instructor.",
+              },
+              duration,
+              totalModules: existing?.modules?.length || 2,
+              totalAssessments: 1,
+              progress: bc.progressPercent !== undefined ? bc.progressPercent : (existing?.progress || 0),
+              status: bc.status?.toLowerCase() === "completed" ? CompletionStatus.COMPLETED : 
+                      bc.status?.toLowerCase() === "in_progress" ? CompletionStatus.IN_PROGRESS : 
+                      (existing?.status || CompletionStatus.NOT_STARTED),
+              dueDate: bc.dueDate,
+              assignedDate: "2026-05-15",
+              lastUpdated: "2026-06-01",
+              objectives: existing?.objectives || [
+                "Understand regulatory compliance and security parameters.",
+                "Incorporate standard processes into daily activities.",
+                "Verify controls are active and report performance issues."
+              ],
+              learningOutcomes: existing?.learningOutcomes || [
+                "Outline key guidelines of the corporate subject matter.",
+                "Recognize and resolve non-compliance events.",
+                "Implement secure coding workflows."
+              ],
+              completionCriteria: "Complete all sections and score 80% on final quiz.",
+              passingPercentage: 80,
+              modules: existing?.modules || [],
+              assessment: existing?.assessment,
+              certificate: existing?.certificate,
+              popularity: 90,
+              department: "Engineering",
+            };
+          });
+          setCourses(mapped);
+        })
+        .finally(() => {
+          if (showSkeleton) setLoading(false);
         });
-        setCourses(mapped);
-      })
-      .finally(() => setLoading(false));
-  }, [debouncedSearch, setCourses]);
+    };
 
+    loadCourses(true);
+
+    const interval = setInterval(() => {
+      loadCourses(false);
+    }, 15000); // Silent refresh every 15 seconds
+
+    return () => clearInterval(interval);
+  }, [debouncedSearch, setCourses]);
   const filteredCourses = getFilteredCourses();
 
   const filterTabs = [

@@ -39,15 +39,30 @@ export default function TeamCompletionPage() {
   const [loading, setLoading] = useState(true);
   const addLog = useAuditStore(s => s.addLog);
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/manager/employees'),
-      api.get('/manager/dashboard/trend'),
-    ]).then(([empRes, trendRes]) => {
+  const loadData = async (showSkeleton = true) => {
+    if (showSkeleton) setLoading(true);
+    try {
+      const [empRes, trendRes] = await Promise.all([
+        api.get('/manager/employees'),
+        api.get('/manager/dashboard/trend'),
+      ]);
       setEmployees(empRes.data);
       setTrendData(trendRes.data);
-    }).catch(err => console.error('Failed to load team completion data:', err))
-      .finally(() => setLoading(false));
+    } catch (err) {
+      console.error('Failed to load team completion data:', err);
+    } finally {
+      if (showSkeleton) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData(true);
+
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Compute KPI metrics from real data

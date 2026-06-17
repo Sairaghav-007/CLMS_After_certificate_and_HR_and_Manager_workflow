@@ -24,6 +24,8 @@ import {
 import { useUIStore } from '@/shared/store';
 import { formatDate } from '@/shared/utils';
 import { userApi, learningPathApi, courseApi } from '@/admin/services/adminApi';
+import { api } from '@/api/client';
+import { deleteFileFromS3 } from '@/hr/lib/s3';
 
 // Types
 interface Account {
@@ -43,6 +45,7 @@ interface LearningPath {
   description: string;
   duration: number; // hours
   department: string;
+  courseIds?: number[];
 }
 
 interface CourseAssign {
@@ -130,13 +133,20 @@ export function AdminPage() {
       setLoadingCourses(false);
     }
   }, [addToast]);
-
   useEffect(() => {
     fetchAccounts();
     fetchPaths();
     fetchCourses();
-  }, [fetchAccounts, fetchPaths, fetchCourses]);
 
+    const interval = setInterval(() => {
+      // Fetch silently in the background
+      userApi.getAll().then(setAccounts).catch(() => {});
+      learningPathApi.getAll().then(setPaths).catch(() => {});
+      courseApi.getAll().then(setCourses).catch(() => {});
+    }, 15000); // Poll every 15 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchAccounts, fetchPaths, fetchCourses]);
   // Form States
   const [accountForm, setAccountForm] = useState({
     uniqueId: '',
@@ -154,6 +164,7 @@ export function AdminPage() {
     description: '',
     duration: 10,
     department: 'Engineering',
+    courseIds: [] as string[]
   });
 
 
@@ -224,13 +235,19 @@ export function AdminPage() {
   // --- LEARNING PATH CRUD HANDLERS ---
   const handleOpenCreatePath = () => {
     setEditPathTarget(null);
-    setPathForm({ name: '', description: '', duration: 15, department: 'Engineering' });
+    setPathForm({ name: '', description: '', duration: 15, department: 'Engineering', courseIds: [] });
     setShowPathModal(true);
   };
 
   const handleOpenEditPath = (path: LearningPath) => {
     setEditPathTarget(path);
-    setPathForm({ name: path.name, description: path.description, duration: path.duration, department: path.department });
+    setPathForm({
+      name: path.name,
+      description: path.description,
+      duration: path.duration,
+      department: path.department,
+      courseIds: path.courseIds?.map(String) || []
+    });
     setShowPathModal(true);
   };
 
@@ -241,7 +258,11 @@ export function AdminPage() {
       return;
     }
     try {
-      const payload = { ...pathForm, duration: Number(pathForm.duration) };
+      const payload = {
+        ...pathForm,
+        duration: Number(pathForm.duration),
+        courseIds: pathForm.courseIds.map(Number)
+      };
       if (editPathTarget) {
         await learningPathApi.update(editPathTarget.id, payload);
         addToast({ type: 'success', title: 'Path Updated', message: `Learning path "${pathForm.name}" updated successfully.` });
@@ -281,7 +302,28 @@ export function AdminPage() {
   };
 
   const handleDeleteCourse = async (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete course "${name}"? This will also delete all progress, questions, and certificates for this course.`)) {
+    if (confirm(`Are you sure you want to delete course "${name}"? This will delete the course content from the database and any uploaded files from storage.`)) {
+      try {
+        // Fetch details to find sections and their media URLs
+        const response = await api.get(`/employee/courses/${id}`);
+        const courseDetail = response.data;
+        const deletePromises: Promise<void>[] = [];
+        if (courseDetail.modules) {
+          courseDetail.modules.forEach((mod: any) => {
+            if (mod.sections) {
+              mod.sections.forEach((sec: any) => {
+                if (sec.materialUrl) {
+                  deletePromises.push(deleteFileFromS3(sec.materialUrl));
+                }
+              });
+            }
+          });
+        }
+        await Promise.all(deletePromises);
+      } catch (err) {
+        console.warn("[Admin] Failed to delete CloudFront files from S3:", err);
+      }
+
       try {
         await courseApi.remove(id);
         addToast({ type: 'success', title: 'Course Deleted', message: `Course "${name}" was deleted.` });
@@ -306,7 +348,7 @@ export function AdminPage() {
 
   const filteredPaths = paths.filter(p => 
     p.name.toLowerCase().includes(pathSearch.toLowerCase()) ||
-    p.department.toLowerCase().includes(pathSearch.toLowerCase())
+    (p.department?.toLowerCase() ?? '').includes(pathSearch.toLowerCase())
   );
 
   const filteredCourses = courseCategoryFilter === 'All' 
@@ -645,20 +687,21 @@ export function AdminPage() {
                   </div>
 
                   <div>
-                    <h5 className="text-xs font-bold text-surface-800 mb-2">Curriculum Breakdown</h5>
+                    <h5 className="text-xs font-bold text-surface-800 mb-2">Curriculum Courses</h5>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between p-2.5 bg-surface-50 rounded-lg text-xs font-bold border border-surface-200">
-                        <span>1. Setup & Orientation</span>
-                        <span className="text-surface-400 font-semibold">2 hours</span>
-                      </div>
-                      <div className="flex items-center justify-between p-2.5 bg-surface-50 rounded-lg text-xs font-bold border border-surface-200">
-                        <span>2. Technical Fundamentals</span>
-                        <span className="text-surface-400 font-semibold">20 hours</span>
-                      </div>
-                      <div className="flex items-center justify-between p-2.5 bg-surface-50 rounded-lg text-xs font-bold border border-surface-200">
-                        <span>3. Practical Assessment</span>
-                        <span className="text-surface-400 font-semibold">10 hours</span>
-                      </div>
+                      {!selectedPathDetails.courseIds || selectedPathDetails.courseIds.length === 0 ? (
+                        <p className="text-xs text-surface-400 font-semibold italic">No courses in this path yet.</p>
+                      ) : (
+                        selectedPathDetails.courseIds.map((courseId: any) => {
+                          const course = courses.find(c => String(c.id) === String(courseId));
+                          return (
+                            <div key={courseId} className="flex items-center justify-between p-2.5 bg-surface-50 rounded-lg text-xs font-bold border border-surface-200">
+                              <span>{course ? course.title : `Course #${courseId}`}</span>
+                              <span className="text-surface-400 font-semibold">{course ? `${course.duration} hrs` : ''}</span>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 </div>
@@ -985,6 +1028,32 @@ export function AdminPage() {
                       <option value="HR">HR</option>
                       <option value="All">All Departments</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-surface-500 uppercase tracking-wider block mb-1">Select Courses in Path</label>
+                  <div className="border border-surface-200 rounded-xl p-3 bg-surface-50 max-h-40 overflow-y-auto space-y-2">
+                    {courses.map((course) => {
+                      const isChecked = pathForm.courseIds.includes(String(course.id));
+                      return (
+                        <label key={course.id} className="flex items-center gap-2 text-xs font-semibold text-surface-700 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setPathForm(prev => ({ ...prev, courseIds: [...prev.courseIds, String(course.id)] }));
+                              } else {
+                                setPathForm(prev => ({ ...prev, courseIds: prev.courseIds.filter(id => id !== String(course.id)) }));
+                              }
+                            }}
+                            className="rounded text-accent-600 focus:ring-accent-500"
+                          />
+                          <span>{course.title}</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 

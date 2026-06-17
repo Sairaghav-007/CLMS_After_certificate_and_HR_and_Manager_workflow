@@ -12,6 +12,7 @@ interface LearningPath {
   description: string;
   duration: number;
   department: string;
+  courseIds?: number[];
 }
 
 interface CourseItem {
@@ -41,7 +42,8 @@ export function EmployeeLearningPathsPage() {
   const [selectedPath, setSelectedPath] = useState<LearningPath | null>(null);
 
   useEffect(() => {
-    const fetchAll = async () => {
+    const fetchAll = async (showSkeleton = true) => {
+      if (showSkeleton) setLoading(true);
       try {
         const [pathsRes, coursesRes] = await Promise.all([
           api.get('/admin/learning-paths'),
@@ -60,22 +62,49 @@ export function EmployeeLearningPathsPage() {
       } catch (err) {
         console.error('Failed to load learning paths:', err);
       } finally {
-        setLoading(false);
+        if (showSkeleton) setLoading(false);
       }
     };
-    fetchAll();
+    fetchAll(true);
+
+    const interval = setInterval(() => {
+      fetchAll(false);
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Filter paths by employee's department (case-insensitive, "All" matches all)
   const myPaths = useMemo(() => {
     const dept = user?.department?.toLowerCase() ?? '';
     return paths.filter(
-      (p) => p.department.toLowerCase() === dept || p.department.toLowerCase() === 'all'
+      (p) => {
+        const pathDept = p.department?.toLowerCase() ?? '';
+        return pathDept === dept || pathDept === 'all';
+      }
     );
   }, [paths, user]);
 
-  // Courses matching department or mandatory
-  const departmentCourses = useMemo(() => courses, [courses]);
+  // Default selectedPath to the first path when myPaths is loaded, or update it dynamically
+  useEffect(() => {
+    if (myPaths.length > 0) {
+      if (!selectedPath) {
+        setSelectedPath(myPaths[0]);
+      } else {
+        const updatedSelected = myPaths.find(p => p.id === selectedPath.id);
+        if (updatedSelected) {
+          setSelectedPath(updatedSelected);
+        }
+      }
+    }
+  }, [myPaths]);
+
+  // Courses matching the selected learning path
+  const pathCourses = useMemo(() => {
+    if (!selectedPath || !selectedPath.courseIds) return [];
+    const pathIds = new Set(selectedPath.courseIds.map(String));
+    return courses.filter((c) => pathIds.has(String(c.id)));
+  }, [selectedPath, courses]);
 
   if (loading) {
     return (
@@ -86,8 +115,8 @@ export function EmployeeLearningPathsPage() {
     );
   }
 
-  const completedCount = departmentCourses.filter((c) => c.status?.toLowerCase() === 'completed').length;
-  const totalCount = departmentCourses.length;
+  const completedCount = pathCourses.filter((c) => c.status?.toLowerCase() === 'completed').length;
+  const totalCount = pathCourses.length;
   const overallPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
@@ -178,7 +207,7 @@ export function EmployeeLearningPathsPage() {
                     <h3 className="text-sm font-black text-surface-900 leading-tight truncate">{path.name}</h3>
                     <span className={cn(
                       'text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider mt-1 inline-block',
-                      path.department.toLowerCase() === 'all'
+                      path.department?.toLowerCase() === 'all'
                         ? 'bg-purple-50 text-purple-600 border border-purple-100'
                         : 'bg-blue-50 text-blue-600 border border-blue-100'
                     )}>
@@ -230,17 +259,17 @@ export function EmployeeLearningPathsPage() {
                 {/* Courses in this path */}
                 <div>
                   <h3 className="text-xs font-black uppercase tracking-widest text-surface-400 mb-4">
-                    Your Courses ({departmentCourses.length})
+                    Your Courses ({pathCourses.length})
                   </h3>
 
-                  {departmentCourses.length === 0 ? (
+                  {pathCourses.length === 0 ? (
                     <div className="text-center py-12 text-surface-400">
                       <BookOpen className="w-10 h-10 mx-auto text-surface-200 mb-3" />
                       <p className="text-xs font-semibold">No courses available yet.</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {departmentCourses.map((course) => {
+                      {pathCourses.map((course) => {
                         const isCompleted = course.status?.toLowerCase() === 'completed';
                         const pct = course.progressPercent ?? 0;
                         return (

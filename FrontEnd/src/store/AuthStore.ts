@@ -39,7 +39,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    localStorage.clear();
+    localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
 
     set({
       user: null,
@@ -111,7 +113,9 @@ export const useAuthStore = create<AuthState>((set) => ({
           console.error("Refresh token failed on startup:", refreshErr);
         }
       }
-      localStorage.clear();
+      localStorage.removeItem("user");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
       set({ user: null, accessToken: null, refreshToken: null });
     }
   }

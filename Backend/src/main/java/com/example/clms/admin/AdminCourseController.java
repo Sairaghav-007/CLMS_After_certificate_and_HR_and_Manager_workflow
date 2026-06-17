@@ -82,9 +82,20 @@ public class AdminCourseController {
         if (courseOpt.isPresent()) {
             Course course = courseOpt.get();
             // delete entries from related tables using JPQL to prevent constraint violations
-            entityManager.createQuery("DELETE FROM CourseProgress cp WHERE cp.courseId = :id").setParameter("id", id).executeUpdate();
-            entityManager.createQuery("DELETE FROM CourseSectionProgress csp WHERE csp.courseId = :id").setParameter("id", id).executeUpdate();
-            entityManager.createQuery("DELETE FROM Certificate c WHERE c.courseId = :id").setParameter("id", id).executeUpdate();
+            // Keep completed progress records so the employee completed count doesn't change
+            entityManager.createQuery("DELETE FROM CourseProgress cp WHERE cp.courseId = :id AND cp.completed = false").setParameter("id", id).executeUpdate();
+            
+            // Keep completed section progress records
+            List<Long> completedEmpIds = entityManager.createQuery("SELECT cp.employeeId FROM CourseProgress cp WHERE cp.courseId = :id AND cp.completed = true", Long.class)
+                .setParameter("id", id).getResultList();
+            if (completedEmpIds.isEmpty()) {
+                entityManager.createQuery("DELETE FROM CourseSectionProgress csp WHERE csp.courseId = :id").setParameter("id", id).executeUpdate();
+            } else {
+                entityManager.createQuery("DELETE FROM CourseSectionProgress csp WHERE csp.courseId = :id AND csp.employeeId NOT IN :empIds")
+                    .setParameter("id", id).setParameter("empIds", completedEmpIds).executeUpdate();
+            }
+
+            // Do NOT delete certificates: Certificate table holds standalone courseId references
             entityManager.createQuery("DELETE FROM CourseEnrollment ce WHERE ce.courseId = :id").setParameter("id", id).executeUpdate();
             entityManager.createQuery("DELETE FROM ChangeRequest cr WHERE cr.courseId = :id").setParameter("id", id).executeUpdate();
             entityManager.createQuery("DELETE FROM Notification n WHERE n.courseId = :id").setParameter("id", id).executeUpdate();

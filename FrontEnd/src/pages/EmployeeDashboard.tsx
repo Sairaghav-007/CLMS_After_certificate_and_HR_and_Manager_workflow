@@ -59,77 +59,87 @@ export function EmployeeDashboard() {
   const user = useAuthStore((state) => state.user);
   const { courses, setCourses } = useCourseStore();
   const navigate = useNavigate();
-
-  // Load Dashboard Stats & Course Library
+  // Load Dashboard Stats & Course Library (with silent background polling)
   useEffect(() => {
-    setLoading(true);
-    const fetchDashboard = api.get("/employee/dashboard").then((res) => setDbData(res.data));
-    const fetchCourses = api.get("/employee/courses").then((res) => {
-      // Map API course values into store structure
-      const localCourses = useCourseStore.getState().courses;
-      const mapped = res.data.map((bc: any) => {
-        const existing = localCourses.find((e) => e.id === String(bc.id));
-        
-        const categoryMap: Record<string, CourseCategory> = {
-          MANDATORY: CourseCategory.MANDATORY,
-          COMPLIANCE: CourseCategory.MANDATORY,
-          TECHNICAL: CourseCategory.ELECTIVE,
-          ELECTIVE: CourseCategory.ELECTIVE,
-          HR: CourseCategory.DEPARTMENT,
-        };
+    const loadData = (showSkeleton: boolean) => {
+      if (showSkeleton) setLoading(true);
+      const fetchDashboard = api.get("/employee/dashboard").then((res) => setDbData(res.data));
+      const fetchCourses = api.get("/employee/courses").then((res) => {
+        const localCourses = useCourseStore.getState().courses;
+        const mapped = res.data.map((bc: any) => {
+          const existing = localCourses.find((e) => e.id === String(bc.id));
+          
+          const categoryMap: Record<string, CourseCategory> = {
+            MANDATORY: CourseCategory.MANDATORY,
+            COMPLIANCE: CourseCategory.MANDATORY,
+            TECHNICAL: CourseCategory.ELECTIVE,
+            ELECTIVE: CourseCategory.ELECTIVE,
+            HR: CourseCategory.DEPARTMENT,
+            'DEPARTMENT-ORIENTED': CourseCategory.DEPARTMENT,
+            DEPARTMENT: CourseCategory.DEPARTMENT,
+          };
 
-        const mappedCategory = categoryMap[bc.category?.toUpperCase()] || CourseCategory.ELECTIVE;
-        const duration = existing?.duration || 6;
+          const mappedCategory = categoryMap[bc.category?.toUpperCase().replace(/ /g, '-')] || CourseCategory.ELECTIVE;
+          const duration = existing?.duration || 6;
 
-        return {
-          id: String(bc.id),
-          title: bc.title,
-          description: bc.description,
-          thumbnail: bc.thumbnail || "",
-          category: mappedCategory,
-          instructor: existing?.instructor || {
-            id: "INS-DEFAULT",
-            name: "Corporate Trainer",
-            title: "L&D Director",
-            avatar: "",
-            bio: "Acme Corp corporate compliance and technology instructor.",
-          },
-          duration,
-          totalModules: existing?.modules?.length || 2,
-          totalAssessments: 1,
-          progress: bc.progressPercent !== undefined ? bc.progressPercent : (existing?.progress || 0),
-          status: bc.status?.toLowerCase() === "completed" ? CompletionStatus.COMPLETED : 
-                  bc.status?.toLowerCase() === "in_progress" ? CompletionStatus.IN_PROGRESS : 
-                  (existing?.status || CompletionStatus.NOT_STARTED),
-          dueDate: bc.dueDate,
-          assignedDate: "2026-05-15",
-          lastUpdated: "2026-06-01",
-          objectives: existing?.objectives || [
-            "Understand regulatory compliance and security parameters.",
-            "Incorporate standard processes into daily activities.",
-            "Verify controls are active and report performance issues."
-          ],
-          learningOutcomes: existing?.learningOutcomes || [
-            "Outline key guidelines of the corporate subject matter.",
-            "Recognize and resolve non-compliance events.",
-            "Implement secure coding workflows."
-          ],
-          completionCriteria: "Complete all sections and score 80% on final quiz.",
-          passingPercentage: 80,
-          modules: existing?.modules || [],
-          assessment: existing?.assessment,
-          certificate: existing?.certificate,
-          popularity: 90,
-          department: "Engineering",
-        };
+          return {
+            id: String(bc.id),
+            title: bc.title,
+            description: bc.description,
+            thumbnail: bc.thumbnail || "",
+            category: mappedCategory,
+            instructor: existing?.instructor || {
+              id: "INS-DEFAULT",
+              name: "Corporate Trainer",
+              title: "L&D Director",
+              avatar: "",
+              bio: "Acme Corp corporate compliance and technology instructor.",
+            },
+            duration,
+            totalModules: existing?.modules?.length || 2,
+            totalAssessments: 1,
+            progress: bc.progressPercent !== undefined ? bc.progressPercent : (existing?.progress || 0),
+            status: bc.status?.toLowerCase() === "completed" ? CompletionStatus.COMPLETED : 
+                    bc.status?.toLowerCase() === "in_progress" ? CompletionStatus.IN_PROGRESS : 
+                    (existing?.status || CompletionStatus.NOT_STARTED),
+            dueDate: bc.dueDate,
+            assignedDate: "2026-05-15",
+            lastUpdated: "2026-06-01",
+            objectives: existing?.objectives || [
+              "Understand regulatory compliance and security parameters.",
+              "Incorporate standard processes into daily activities.",
+              "Verify controls are active and report performance issues."
+            ],
+            learningOutcomes: existing?.learningOutcomes || [
+              "Outline key guidelines of the corporate subject matter.",
+              "Recognize and resolve non-compliance events.",
+              "Implement secure coding workflows."
+            ],
+            completionCriteria: "Complete all sections and score 80% on final quiz.",
+            passingPercentage: 80,
+            modules: existing?.modules || [],
+            assessment: existing?.assessment,
+            certificate: existing?.certificate,
+            popularity: 90,
+            department: "Engineering",
+          };
+        });
+        setCourses(mapped);
       });
-      setCourses(mapped);
-    });
 
-    Promise.all([fetchDashboard, fetchCourses])
-      .finally(() => setLoading(false));
+      return Promise.all([fetchDashboard, fetchCourses]).finally(() => {
+        if (showSkeleton) setLoading(false);
+      });
+    };
+
+    loadData(true);
+
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 15000); // Silent refresh every 15 seconds
+
+    return () => clearInterval(interval);
   }, [setCourses]);
-
   // Dashboard statistics: primary numbers from dbData (refresh-safe),
   // only assigned count and hours come from CourseStore (needs full course list)
   const dashboardStats = useMemo(() => {

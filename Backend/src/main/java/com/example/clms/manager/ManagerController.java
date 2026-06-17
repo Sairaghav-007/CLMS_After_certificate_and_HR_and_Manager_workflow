@@ -123,15 +123,19 @@ public class ManagerController {
         for (User emp : employees) {
             List<Course> empCourses = getAssignedCoursesForEmployee(emp, activeCourses);
             totalAssigned += empCourses.size();
+            
+            // Count completed courses using all progress records for this employee (including deleted/archived ones)
+            completed += allProgress.stream()
+                    .filter(p -> p.getEmployeeId().equals(emp.getId()) && p.isCompleted())
+                    .count();
+
             for (Course course : empCourses) {
                 CourseProgress prog = allProgress.stream()
                         .filter(p -> p.getEmployeeId().equals(emp.getId()) && p.getCourseId().equals(course.getId()))
                         .findFirst()
                         .orElse(null);
 
-                if (prog != null && prog.isCompleted()) {
-                    completed++;
-                } else {
+                if (prog == null || !prog.isCompleted()) {
                     if (prog != null && prog.getProgressPercentage() > 0) {
                         inProgress++;
                     }
@@ -179,25 +183,72 @@ public class ManagerController {
         
         for (User emp : employees) {
             Map<String, Object> record = new HashMap<>();
-            record.put("id", String.valueOf(emp.getId()));
+            record.put("id", "EMP-" + emp.getId());
             record.put("name", emp.getFullName());
+            record.put("email", emp.getEmail());
             record.put("department", emp.getDepartment() != null ? emp.getDepartment() : "Engineering");
             record.put("designation", emp.getDesignation() != null ? emp.getDesignation() : "Software Engineer");
+            record.put("joiningDate", "2026-03-01");
+            record.put("linkedinUrl", emp.getLinkedinUrl());
+            record.put("avatar", emp.getFullName() != null && !emp.getFullName().isEmpty() ? emp.getFullName().substring(0, 1) : "E");
             
             List<Course> empCourses = getAssignedCoursesForEmployee(emp, activeCourses);
-            long empCompleted = 0;
-            for (Course course : empCourses) {
-                boolean isComp = allProgress.stream()
-                        .anyMatch(p -> p.getEmployeeId().equals(emp.getId()) && p.getCourseId().equals(course.getId()) && p.isCompleted());
-                if (isComp) {
-                    empCompleted++;
-                }
-            }
+            long empCompleted = allProgress.stream()
+                    .filter(p -> p.getEmployeeId().equals(emp.getId()) && p.isCompleted())
+                    .count();
 
             record.put("completedCourses", empCompleted);
             record.put("assignedCourses", (long) empCourses.size());
-            record.put("status", emp.getStatus());
-            record.put("avatar", emp.getFullName() != null && !emp.getFullName().isEmpty() ? emp.getFullName().substring(0, 1) : "E");
+
+            // Count in-progress & overdue for compliance status
+            long inProgress = 0;
+            long overdue = 0;
+            java.time.LocalDate today = java.time.LocalDate.now();
+            for (Course course : empCourses) {
+                CourseProgress prog = allProgress.stream()
+                        .filter(p -> p.getEmployeeId().equals(emp.getId()) && p.getCourseId().equals(course.getId()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (prog == null || !prog.isCompleted()) {
+                    if (prog != null && prog.getProgressPercentage() > 0) {
+                        inProgress++;
+                    }
+                    if (course.getDueDate() != null && course.getDueDate().isBefore(today)) {
+                        overdue++;
+                    }
+                }
+            }
+            record.put("inProgressCourses", inProgress);
+            record.put("overdueCourses", overdue);
+
+            String status = emp.getStatus() != null ? emp.getStatus() : "Compliant";
+            if (overdue > 0) {
+                status = "Non-Compliant";
+            } else if (inProgress > 0) {
+                status = "Compliant";
+            }
+            record.put("status", status);
+
+            long certsCount = certificateRepository.findByEmployeeId(emp.getId()).size();
+            record.put("certificatesEarned", certsCount);
+
+            double avgScore = allProgress.stream()
+                    .filter(p -> p.getEmployeeId().equals(emp.getId()) && p.getLastScore() != null)
+                    .mapToInt(CourseProgress::getLastScore)
+                    .average()
+                    .orElse(0.0);
+            record.put("averageQuizScore", Math.round(avgScore));
+
+            double hours = allProgress.stream()
+                    .filter(p -> p.getEmployeeId().equals(emp.getId()))
+                    .mapToDouble(p -> {
+                        Course course = activeCourses.stream().filter(c -> c.getId().equals(p.getCourseId())).findFirst().orElse(null);
+                        int duration = course != null ? course.getDuration() : 6;
+                        return (p.getProgressPercentage() / 100.0) * duration;
+                    })
+                    .sum();
+            record.put("learningHours", Math.round(hours));
             
             activity.add(record);
         }
@@ -716,6 +767,22 @@ public class ManagerController {
         return ResponseEntity.ok(saved);
     }
 
+    // Delete Group Cohort
+    @DeleteMapping("/groups/{id}")
+    @Transactional
+    public ResponseEntity<Map<String, String>> deleteGroup(@PathVariable String id) {
+        if (!groupRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        groupRepository.deleteGroupCourses(id);
+        groupRepository.deleteGroupEmployees(id);
+        groupRepository.deleteById(id);
+        Map<String, String> res = new HashMap<>();
+        res.put("status", "success");
+        res.put("message", "Group deleted successfully");
+        return ResponseEntity.ok(res);
+    }
+
     // Warning / Nudge log endpoint
     public static class NudgeRequest {
         public Long employeeId;
@@ -815,7 +882,7 @@ public class ManagerController {
 
             // Compute database-driven stats
             List<CourseProgress> progresses = courseProgressRepository.findByEmployeeId(emp.getId());
-            long completed = 0;
+            long completed = progresses.stream().filter(CourseProgress::isCompleted).count();
             long inProgress = 0;
             long overdue = 0;
             
@@ -826,9 +893,7 @@ public class ManagerController {
                         .findFirst()
                         .orElse(null);
                 
-                if (p != null && p.isCompleted()) {
-                    completed++;
-                } else {
+                if (p == null || !p.isCompleted()) {
                     if (p != null && p.getProgressPercentage() > 0) {
                         inProgress++;
                     }

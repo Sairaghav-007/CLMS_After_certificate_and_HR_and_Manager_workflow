@@ -46,7 +46,9 @@ public class EmployeeDashboardController {
         // Get all progress records for this employee
         List<CourseProgress> allProgress = courseProgressRepository.findByEmployeeId(empId);
 
-        int completedCourses = 0;
+        int completedCourses = (int) allProgress.stream()
+                .filter(CourseProgress::isCompleted)
+                .count();
         int inProgressCourses = 0;
         int dueCourses = 0;
         int upcomingCourses = 0;
@@ -59,19 +61,15 @@ public class EmployeeDashboardController {
                     .findFirst()
                     .orElse(null);
 
-            if (progress != null && progress.isCompleted()) {
-                completedCourses++;
-            } else if (progress != null && progress.getProgressPercentage() > 0) {
-                inProgressCourses++;
-                // If due date is within 7 days, also count as due
-                if (course.getDueDate() != null && !course.getDueDate().isAfter(today.plusDays(7))) {
-                    dueCourses++;
-                }
-            } else {
-                // Not started
-                if (course.getDueDate() != null && !course.getDueDate().isAfter(today.plusDays(14))) {
-                    upcomingCourses++;
+            if (progress == null || !progress.isCompleted()) {
+                if (progress != null && progress.getProgressPercentage() > 0) {
+                    inProgressCourses++;
+                    // If due date is within 7 days, also count as due
+                    if (course.getDueDate() != null && !course.getDueDate().isAfter(today.plusDays(7))) {
+                        dueCourses++;
+                    }
                 } else {
+                    // Not started
                     upcomingCourses++;
                 }
             }

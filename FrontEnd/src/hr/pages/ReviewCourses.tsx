@@ -46,7 +46,16 @@ export default function ReviewCourses() {
     es.addEventListener('course_update', () => { fetchCourses(); });
     es.addEventListener('course_review', () => { fetchCourses(); });
     es.onerror = () => {}; // silent — non-blocking
-    return () => es.close();
+
+    // Polling backup
+    const interval = setInterval(() => {
+      fetchCourses();
+    }, 15000);
+
+    return () => {
+      es.close();
+      clearInterval(interval);
+    };
   }, [fetchCourses]);
 
   const filteredCourses = useMemo(() => {

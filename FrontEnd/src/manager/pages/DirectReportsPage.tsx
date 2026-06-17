@@ -21,37 +21,63 @@ export default function DirectReportsPage() {
   const addLog = useAuditStore(s => s.addLog);
   const pageSize = 10;
 
+  const fetchEmployees = async (showSkeleton = true) => {
+    if (showSkeleton) setIsLoading(true);
+    try {
+      const res = await api.get('/manager/employees');
+      setEmployees(res.data);
+    } catch (err) {
+      console.error("Failed to load direct reports", err);
+    } finally {
+      if (showSkeleton) setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setIsLoading(true);
-    api.get('/manager/employees')
-      .then(res => {
-        setEmployees(res.data);
-      })
-      .catch(err => {
-        console.error("Failed to load direct reports", err);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    fetchEmployees(true);
+
+    const interval = setInterval(() => {
+      fetchEmployees(false);
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  // Update selectedEmployee reference if it changes during polling
+  useEffect(() => {
+    if (selectedEmployee && employees.length > 0) {
+      const updated = employees.find(e => e.id === selectedEmployee.id);
+      if (updated) {
+        setSelectedEmployee(updated);
+      }
+    }
+  }, [employees]);
 
   useEffect(() => {
     if (selectedEmployee) {
-      setLoadingCourses(true);
-      api.get(`/manager/employees/${selectedEmployee.id}/courses`)
-        .then(res => {
+      const fetchCourses = async (showSkeleton = true) => {
+        if (showSkeleton) setLoadingCourses(true);
+        try {
+          const res = await api.get(`/manager/employees/${selectedEmployee.id}/courses`);
           setEmployeeCourses(res.data);
-        })
-        .catch(err => {
+        } catch (err) {
           console.error("Failed to load employee courses", err);
-        })
-        .finally(() => {
-          setLoadingCourses(false);
-        });
+        } finally {
+          if (showSkeleton) setLoadingCourses(false);
+        }
+      };
+
+      fetchCourses(true);
+
+      const interval = setInterval(() => {
+        fetchCourses(false);
+      }, 15000);
+
+      return () => clearInterval(interval);
     } else {
       setEmployeeCourses([]);
     }
-  }, [selectedEmployee]);
+  }, [selectedEmployee?.id]);
 
   const filtered = useMemo(() => {
     return employees.filter(emp => {

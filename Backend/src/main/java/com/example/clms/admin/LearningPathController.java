@@ -37,54 +37,74 @@ public class LearningPathController {
     }
 
     @PostMapping
-    public LearningPath createPath(@RequestBody LearningPath path) {
-        if (path.getId() == null || path.getId().trim().isEmpty()) {
-            path.setId("PATH-" + System.currentTimeMillis());
-        }
-        LearningPath saved = learningPathRepository.save(path);
-
-        // Notify Employees
+    public ResponseEntity<?> createPath(@RequestBody LearningPath path) {
         try {
-            List<User> employees = userRepository.findAll().stream()
-                .filter(u -> u.getRole() == Role.EMPLOYEE && u.isActive())
-                .filter(u -> saved.getDepartment() == null || saved.getDepartment().isBlank() 
-                         || "All".equalsIgnoreCase(saved.getDepartment()) 
-                         || saved.getDepartment().equalsIgnoreCase(u.getDepartment()))
-                .toList();
-
-            for (User emp : employees) {
-                try {
-                    notificationService.notifyEmployee(
-                        emp,
-                        "learning_path",
-                        "New Learning Path Assigned",
-                        "You have been assigned the learning path \"" + saved.getName() + "\".",
-                        null
-                    );
-                } catch (Exception e) {
-                    System.err.println("[FCM] Failed to notify employee " + emp.getId() + " about learning path: " + e.getMessage());
-                }
+            if (path.getId() == null || path.getId().trim().isEmpty()) {
+                path.setId("PATH-" + System.currentTimeMillis());
             }
-        } catch (Exception e) {
-            System.err.println("[LearningPath] Notification dispatch failed: " + e.getMessage());
-        }
+            LearningPath saved = learningPathRepository.save(path);
 
-        return saved;
+            // Notify Employees
+            try {
+                List<User> employees = userRepository.findAll().stream()
+                    .filter(u -> u.getRole() == Role.EMPLOYEE && u.isActive())
+                    .filter(u -> saved.getDepartment() == null || saved.getDepartment().isBlank() 
+                             || "All".equalsIgnoreCase(saved.getDepartment()) 
+                             || saved.getDepartment().equalsIgnoreCase(u.getDepartment()))
+                    .toList();
+
+                for (User emp : employees) {
+                    try {
+                        notificationService.notifyEmployee(
+                            emp,
+                            "learning_path",
+                            "New Learning Path Assigned",
+                            "You have been assigned the learning path \"" + saved.getName() + "\".",
+                            null
+                        );
+                    } catch (Exception e) {
+                        System.err.println("[FCM] Failed to notify employee " + emp.getId() + " about learning path: " + e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[LearningPath] Notification dispatch failed: " + e.getMessage());
+            }
+
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            System.err.println("[LearningPath] Save failed with exception:");
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Failed to create learning path: " + e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<LearningPath> updatePath(@PathVariable String id, @RequestBody LearningPath pathDetails) {
-        Optional<LearningPath> optionalPath = learningPathRepository.findById(id);
-        if (optionalPath.isPresent()) {
-            LearningPath path = optionalPath.get();
-            path.setName(pathDetails.getName());
-            path.setDescription(pathDetails.getDescription());
-            path.setDuration(pathDetails.getDuration());
-            path.setDepartment(pathDetails.getDepartment());
-            LearningPath updatedPath = learningPathRepository.save(path);
-            return ResponseEntity.ok(updatedPath);
-        } else {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<?> updatePath(@PathVariable String id, @RequestBody LearningPath pathDetails) {
+        try {
+            Optional<LearningPath> optionalPath = learningPathRepository.findById(id);
+            if (optionalPath.isPresent()) {
+                LearningPath path = optionalPath.get();
+                path.setName(pathDetails.getName());
+                path.setDescription(pathDetails.getDescription());
+                path.setDuration(pathDetails.getDuration());
+                path.setDepartment(pathDetails.getDepartment());
+                if (path.getCourseIds() == null) {
+                    path.setCourseIds(new java.util.ArrayList<>());
+                } else {
+                    path.getCourseIds().clear();
+                }
+                if (pathDetails.getCourseIds() != null) {
+                    path.getCourseIds().addAll(pathDetails.getCourseIds());
+                }
+                LearningPath updatedPath = learningPathRepository.save(path);
+                return ResponseEntity.ok(updatedPath);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            System.err.println("[LearningPath] Update failed with exception:");
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Failed to update learning path: " + e.getMessage());
         }
     }
 

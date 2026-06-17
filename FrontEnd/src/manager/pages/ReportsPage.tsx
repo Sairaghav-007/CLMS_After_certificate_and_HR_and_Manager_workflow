@@ -12,9 +12,25 @@ import { PageHeader, Modal } from '../components/ui';
 import { useAuditStore } from '../stores';
 import { api } from '@/api/client';
 import type { ReportType, ReportFrequency, ExportFormat, ScheduledReport } from '../types';
+import { mockScheduledReports } from '../data/mockData';
 
 export default function ReportsPage() {
-  const [reports, setReports] = useState<ScheduledReport[]>([]);
+  const [reports, setReports] = useState<ScheduledReport[]>(() => {
+    const saved = localStorage.getItem('scheduled_reports');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved reports:", e);
+      }
+    }
+    return mockScheduledReports;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('scheduled_reports', JSON.stringify(reports));
+  }, [reports]);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const addLog = useAuditStore(s => s.addLog);

@@ -93,4 +93,42 @@ export const uploadFileToS3 = async (
   }
 };
 
+/**
+ * Deletes a file from Amazon S3 based on its CloudFront URL.
+ */
+export const deleteFileFromS3 = async (url: string): Promise<void> => {
+  if (!url || !isS3Configured()) return;
+
+  // Extract the S3 key from the URL
+  const cleanCFUrl = cloudfrontDomain.replace(/^(https?:\/\/)?/, "").replace(/\/$/, "");
+  if (!url.includes(cleanCFUrl)) {
+    return;
+  }
+
+  const parts = url.split(cleanCFUrl + "/");
+  if (parts.length < 2) return;
+  const key = parts[1];
+
+  try {
+    const { S3Client, DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+    const s3Client = new S3Client({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+
+    const command = new DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+
+    await s3Client.send(command);
+    console.log(`[S3 LIVE] Deleted successfully. Key: ${key}`);
+  } catch (error) {
+    console.error(`[S3 LIVE] Failed to delete key: ${key}`, error);
+  }
+};
+
 

@@ -27,7 +27,8 @@ export default function NudgeEmployeesPage() {
 
   const addLog = useAuditStore(s => s.addLog);
 
-  const fetchData = async () => {
+  const fetchData = async (showSkeleton = true) => {
+    if (showSkeleton) setLoading(true);
     try {
       const [empRes, courseRes, historyRes] = await Promise.all([
         api.get('/manager/dashboard/activity'),
@@ -38,17 +39,23 @@ export default function NudgeEmployeesPage() {
       setCourses(courseRes.data);
       setNudgeHistory(historyRes.data);
       if (courseRes.data.length > 0) {
-        setSelectedCourseId(String(courseRes.data[0].id));
+        setSelectedCourseId(prev => prev || String(courseRes.data[0].id));
       }
     } catch (err) {
       console.error("Failed to load nudge page data:", err);
     } finally {
-      setLoading(false);
+      if (showSkeleton) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
+
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const filteredEmployees = useMemo(() => {

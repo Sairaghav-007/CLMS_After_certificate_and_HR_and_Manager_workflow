@@ -20,8 +20,21 @@ export default function PublishedCourses() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    fetchCourses().finally(() => setLoading(false));
+    const loadData = async (showSkeleton = true) => {
+      if (showSkeleton) setLoading(true);
+      try {
+        await fetchCourses();
+      } finally {
+        if (showSkeleton) setLoading(false);
+      }
+    };
+    loadData(true);
+
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, [fetchCourses]);
 
   // Filter: ALL Published courses

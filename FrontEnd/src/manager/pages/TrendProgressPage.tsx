@@ -28,11 +28,26 @@ export default function TrendProgressPage() {
   const [loading, setLoading] = useState(true);
   const addLog = useAuditStore(s => s.addLog);
 
+  const fetchTrend = async (showSkeleton = true) => {
+    if (showSkeleton) setLoading(true);
+    try {
+      const res = await api.get('/manager/dashboard/trend');
+      setTrendData(res.data);
+    } catch (err) {
+      console.error('Failed to load trend data:', err);
+    } finally {
+      if (showSkeleton) setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    api.get('/manager/dashboard/trend')
-      .then(res => setTrendData(res.data))
-      .catch(err => console.error('Failed to load trend data:', err))
-      .finally(() => setLoading(false));
+    fetchTrend(true);
+
+    const interval = setInterval(() => {
+      fetchTrend(false);
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Derive KPI stats from real trend data

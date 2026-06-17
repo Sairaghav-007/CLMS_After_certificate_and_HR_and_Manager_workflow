@@ -70,7 +70,16 @@ export default function ReviewCoursesPage() {
       fetchReviews();
     });
     es.onerror = () => {}; // silent — non-blocking
-    return () => es.close();
+
+    // Polling backup
+    const interval = setInterval(() => {
+      fetchReviews();
+    }, 15000);
+
+    return () => {
+      es.close();
+      clearInterval(interval);
+    };
   }, []);
 
   const filteredReviews = useMemo(() => 

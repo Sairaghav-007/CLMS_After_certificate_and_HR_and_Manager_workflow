@@ -69,11 +69,57 @@ export function AppLayout() {
     }
   }, [user, accessToken]);
 
+  const toastedNotificationsRef = useRef<Set<string>>(new Set());
+  const isFirstLoadRef = useRef(true);
+
+  // Reset first load and toasted set when user changes
+  useEffect(() => {
+    toastedNotificationsRef.current.clear();
+    isFirstLoadRef.current = true;
+  }, [user]);
+
+  // Initial fetch
   useEffect(() => {
     if (user) {
       fetchNotifications().catch((err) => console.warn('[Layout] Failed to fetch notifications:', err));
     }
   }, [user, fetchNotifications]);
+
+  // Poll notifications every 15 seconds
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      fetchNotifications().catch((err) => console.warn('[Layout] Failed to fetch notifications in poll:', err));
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [user, fetchNotifications]);
+
+  // Toast trigger on notifications updates
+  useEffect(() => {
+    if (!user || notifications.length === 0) return;
+
+    if (isFirstLoadRef.current) {
+      // On first load, record existing notification IDs to avoid triggering toasts for past notifications
+      notifications.forEach((notif) => {
+        toastedNotificationsRef.current.add(String(notif.id));
+      });
+      isFirstLoadRef.current = false;
+      return;
+    }
+
+    // Trigger toast for new unread notifications
+    notifications.forEach((notif) => {
+      const idStr = String(notif.id);
+      if (!notif.isRead && !toastedNotificationsRef.current.has(idStr)) {
+        toastedNotificationsRef.current.add(idStr);
+        addToast({
+          type: 'info',
+          title: notif.title || 'New Notification',
+          message: notif.message || '',
+        });
+      }
+    });
+  }, [notifications, user, addToast]);
 
   useEffect(() => {
     const unsubscribe = onForegroundMessage((payload) => {
