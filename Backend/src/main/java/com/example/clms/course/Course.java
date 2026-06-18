@@ -48,6 +48,21 @@ public class Course {
     private String thumbnail;
     private String department;
 
+    private LocalDate startDate;
+    private LocalDate endDate;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "course_objectives", joinColumns = @JoinColumn(name = "course_id"))
+    @Column(name = "objective", length = 1024)
+    @Builder.Default
+    private List<String> objectives = new java.util.ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "course_learning_outcomes", joinColumns = @JoinColumn(name = "course_id"))
+    @Column(name = "outcome", length = 1024)
+    @Builder.Default
+    private List<String> learningOutcomes = new java.util.ArrayList<>();
+
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("moduleOrder ASC")
     private List<CourseModule> modules;

@@ -9,6 +9,11 @@ public record CourseDetailResponse(
         String category,
         String description,
         LocalDate dueDate,
+        LocalDate startDate,
+        LocalDate endDate,
+        String createdBy,
+        List<String> objectives,
+        List<String> learningOutcomes,
         int progress,
         String status,
         CertificateResponse certificate,
@@ -71,6 +76,9 @@ public record CourseDetailResponse(
             int progress,
             boolean isCompleted,
             Integer duration,
-            Integer totalPages
+            Integer totalPages,
+            String scormPackageUuid,
+            String scormEntryPath,
+            String scormVersion
     ) {}
 }

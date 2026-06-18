@@ -14,6 +14,7 @@ import {
   BookOpen,
   Video,
   Zap,
+  FileUp,
   Award,
   ChevronDown,
   ChevronRight,
@@ -32,6 +33,7 @@ const resourceIcons = {
   [ModuleResourceType.PPT]: Presentation,
   [ModuleResourceType.READING]: BookOpen,
   [ModuleResourceType.INTERACTIVE]: Zap,
+  [ModuleResourceType.SCORM]: FileUp,
 };
 
 const categoryColors = {
@@ -229,6 +231,7 @@ export function CoursePreviewPage() {
               PDF: ModuleResourceType.PDF,
               PPT: ModuleResourceType.PPT,
               DOCUMENT: ModuleResourceType.READING,
+              SCORM: ModuleResourceType.SCORM,
             };
 
             return {
@@ -239,6 +242,9 @@ export function CoursePreviewPage() {
               url: s.materialUrl,
               isCompleted: s.isCompleted !== undefined ? s.isCompleted : (existingR?.isCompleted || false),
               progress: s.progress !== undefined ? s.progress : (existingR?.progress || 0),
+              scormPackageUuid: s.scormPackageUuid,
+              scormEntryPath: s.scormEntryPath,
+              scormVersion: s.scormVersion,
             };
           });
 
@@ -299,9 +305,9 @@ export function CoursePreviewPage() {
           description: res.data.description,
           thumbnail: res.data.thumbnail || "",
           category: mappedCategory,
-          instructor: localCourse?.instructor || {
+          instructor: {
             id: "INS-DEFAULT",
-            name: "Corporate L&D Lead",
+            name: res.data.createdBy || "Corporate L&D Lead",
             title: "L&D Trainer",
             avatar: "",
             bio: "Acme corporate director for compliance policies and development training.",
@@ -313,17 +319,17 @@ export function CoursePreviewPage() {
           status: res.data.status || (totalCompletedPercent >= 100 
             ? CompletionStatus.COMPLETED 
             : totalCompletedPercent > 0 
-              ? CompletionStatus.IN_PROGRESS 
-              : CompletionStatus.NOT_STARTED),
+            ? CompletionStatus.IN_PROGRESS 
+            : CompletionStatus.NOT_STARTED),
           dueDate: res.data.dueDate,
           assignedDate: "2026-05-15",
           lastUpdated: "2026-06-01",
-          objectives: localCourse?.objectives || [
+          objectives: (res.data.objectives && res.data.objectives.length > 0) ? res.data.objectives : [
             `Analyze critical components of ${res.data.title}.`,
             "Learn operational constraints and quality regulations.",
             "Complete assessments to certify competency."
           ],
-          learningOutcomes: localCourse?.learningOutcomes || [
+          learningOutcomes: (res.data.learningOutcomes && res.data.learningOutcomes.length > 0) ? res.data.learningOutcomes : [
             "Demonstrate functional and technical competency.",
             "Enforce security parameters in team workflows.",
             "Verify compliance standards are consistently met."
@@ -363,6 +369,8 @@ export function CoursePreviewPage() {
           } : (localCourse?.certificate || undefined),
           popularity: 85,
           department: "Engineering",
+          startDate: res.data.startDate,
+          endDate: res.data.endDate,
         };
 
         // Cache course detail state inside course store
@@ -482,6 +490,12 @@ export function CoursePreviewPage() {
               <Calendar className="w-4 h-4 text-white/50" />
               Updated {formatDate(course.lastUpdated)}
             </span>
+            {course.startDate && course.endDate && (
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-white/50" />
+                Active: {formatDate(course.startDate)} - {formatDate(course.endDate)}
+              </span>
+            )}
           </div>
         </div>
 
@@ -703,6 +717,18 @@ export function CoursePreviewPage() {
                   {formatDate(course.dueDate)}
                 </span>
               </div>
+              {course.startDate && (
+                <div className="flex justify-between">
+                  <span className="text-surface-400 uppercase tracking-wider text-[10px] font-black">Start Date</span>
+                  <span className="text-surface-800">{formatDate(course.startDate)}</span>
+                </div>
+              )}
+              {course.endDate && (
+                <div className="flex justify-between">
+                  <span className="text-surface-400 uppercase tracking-wider text-[10px] font-black">End Date</span>
+                  <span className="text-surface-800">{formatDate(course.endDate)}</span>
+                </div>
+              )}
             </div>
 
             {/* Instructor Card */}

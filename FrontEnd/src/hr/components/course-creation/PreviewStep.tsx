@@ -15,6 +15,7 @@ import {
   AlertCircle,
   X,
   Send,
+  FileUp,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -155,6 +156,7 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ onBack }) => {
                       {session.type === 'Video' && <PlayCircle className="w-4 h-4 text-blue-500" />}
                       {session.type === 'PDF' && <FileText className="w-4 h-4 text-red-500" />}
                       {session.type === 'PPT' && <Presentation className="w-4 h-4 text-orange-500" />}
+                      {session.type === 'SCORM' && <FileUp className="w-4 h-4 text-purple-500" />}
                       <span className="text-sm font-medium">{session.title}</span>
                     </div>
                     <span className="text-xs text-surface-400">

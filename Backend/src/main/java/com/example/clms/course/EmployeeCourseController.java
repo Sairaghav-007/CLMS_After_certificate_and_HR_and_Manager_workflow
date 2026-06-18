@@ -6,6 +6,8 @@ import com.example.clms.notification.InAppNotification;
 import com.example.clms.notification.InAppNotificationRepository;
 import com.example.clms.manager.NudgeLog;
 import com.example.clms.manager.NudgeLogRepository;
+import com.example.clms.scorm.ScormPackage;
+import com.example.clms.scorm.ScormPackageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -34,6 +36,7 @@ public class EmployeeCourseController {
     private final QuestionRepository questionRepository;
     private final InAppNotificationRepository inAppNotificationRepository;
     private final NudgeLogRepository nudgeLogRepository;
+    private final ScormPackageRepository scormPackageRepository;
 
     private User getAuthenticatedUser() {
         String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
@@ -172,6 +175,20 @@ public class EmployeeCourseController {
                     completedSectionsCount++;
                 }
 
+                String scormPackageUuid = null;
+                String scormEntryPath = null;
+                String scormVersion = null;
+
+                if (section.getMaterialType() == MaterialType.SCORM && section.getScormPackageId() != null) {
+                    Optional<ScormPackage> pkgOpt = scormPackageRepository.findById(section.getScormPackageId());
+                    if (pkgOpt.isPresent()) {
+                        ScormPackage pkg = pkgOpt.get();
+                        scormPackageUuid = pkg.getPackageUuid();
+                        scormEntryPath = pkg.getEntryPath();
+                        scormVersion = pkg.getVersion();
+                    }
+                }
+
                 sectionResponses.add(new CourseDetailResponse.SectionResponse(
                         section.getId(),
                         section.getTitle(),
@@ -181,7 +198,10 @@ public class EmployeeCourseController {
                         secProgress,
                         secCompleted,
                         section.getDuration() != null ? section.getDuration() : 0,
-                        calculateTotalPages(section.getMaterialUrl(), section.getMaterialType())
+                        calculateTotalPages(section.getMaterialUrl(), section.getMaterialType()),
+                        scormPackageUuid,
+                        scormEntryPath,
+                        scormVersion
                 ));
             }
 
@@ -223,6 +243,11 @@ public class EmployeeCourseController {
                 course.getCategory(),
                 course.getDescription(),
                 course.getDueDate(),
+                course.getStartDate(),
+                course.getEndDate(),
+                course.getCreatedBy() != null ? course.getCreatedBy() : "HR Specialist",
+                course.getObjectives() != null ? course.getObjectives() : new ArrayList<>(),
+                course.getLearningOutcomes() != null ? course.getLearningOutcomes() : new ArrayList<>(),
                 progressPercent,
                 status,
                 certResponse,

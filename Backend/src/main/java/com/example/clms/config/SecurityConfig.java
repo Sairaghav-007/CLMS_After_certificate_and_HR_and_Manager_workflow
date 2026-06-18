@@ -38,6 +38,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/manager/dashboard/events").permitAll()
                         .requestMatchers("/api/hr/events").permitAll()
+                        .requestMatchers("/scorm-serve/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/employee/**").hasAnyAuthority("EMPLOYEE", "MANAGER", "HR")
                         .requestMatchers(HttpMethod.GET, "/api/admin/learning-paths", "/api/admin/learning-paths/**").hasAnyAuthority("EMPLOYEE", "MANAGER", "HR", "ADMIN")

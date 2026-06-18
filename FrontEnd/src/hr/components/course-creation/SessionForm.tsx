@@ -9,15 +9,17 @@ import { cn } from '@/hr/lib/utils';
 import { Video, FileText, Presentation, Plus, Upload, CheckCircle2, FileUp, Copy, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { uploadFileToS3, isS3Configured } from '@/hr/lib/s3';
+import { api } from '@/api/client';
 
 const sessionSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  type: z.enum(['Video', 'PDF', 'PPT']),
+  type: z.enum(['Video', 'PDF', 'PPT', 'SCORM']),
   duration: z.number().min(0),
   videoDescription: z.string().optional(),
   pdfDescription: z.string().optional(),
   pptDescription: z.string().optional(),
+  scormDescription: z.string().optional(),
 });
 
 type SessionFormValues = z.infer<typeof sessionSchema>;
@@ -34,10 +36,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
   const isDark = theme === 'dark';
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [uploadedFile, setUploadedFile] = useState<{name: string, url: string} | null>(
+  const [uploadedFile, setUploadedFile] = useState<{name: string, url: string, scormPackageId?: number} | null>(
     session.videoUrl ? { name: 'Video Uploaded', url: session.videoUrl } :
     session.pdfUrl ? { name: 'PDF Uploaded', url: session.pdfUrl } :
-    session.pptUrl ? { name: 'PPT Uploaded', url: session.pptUrl } : null
+    session.pptUrl ? { name: 'PPT Uploaded', url: session.pptUrl } :
+    (session as any).scormUrl ? { name: 'SCORM Package Uploaded', url: (session as any).scormUrl, scormPackageId: (session as any).scormPackageId } : null
   );
 
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -59,6 +62,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
       videoDescription: session.videoDescription,
       pdfDescription: session.pdfDescription,
       pptDescription: session.pptDescription,
+      scormDescription: (session as any).scormDescription,
     },
   });
 
@@ -69,6 +73,53 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
     if (file) {
       setIsUploading(true);
       setUploadProgress(0);
+
+      if (sessionType === 'SCORM') {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const response = await api.post('/hr/upload/scorm', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+            onUploadProgress: (progressEvent) => {
+              const total = progressEvent.total || file.size;
+              const current = progressEvent.loaded;
+              const percent = Math.round((current * 100) / total);
+              setUploadProgress(percent);
+            },
+          });
+
+          setUploadedFile({
+            name: file.name,
+            url: response.data.scormUrl,
+            scormPackageId: response.data.id,
+          });
+
+          if (watch('duration') === 0) {
+            setValue('duration', 300);
+          }
+
+          toast.success(`${file.name} uploaded successfully!`, {
+            style: {
+              background: isDark ? '#1e293b' : '#ffffff',
+              color: isDark ? '#f8fafc' : '#0f172a',
+            }
+          });
+        } catch (err) {
+          toast.error(`Upload failed: ${(err as any).response?.data?.message || (err as Error).message}`, {
+            style: {
+              background: isDark ? '#1e293b' : '#ffffff',
+              color: isDark ? '#f8fafc' : '#0f172a',
+            }
+          });
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(null);
+        }
+        return;
+      }
 
       // Inform user of configuration status
       if (!isS3Configured()) {
@@ -131,6 +182,10 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
       if (data.type === 'Video') fileUpdate.videoUrl = uploadedFile.url;
       if (data.type === 'PDF') fileUpdate.pdfUrl = uploadedFile.url;
       if (data.type === 'PPT') fileUpdate.pptUrl = uploadedFile.url;
+      if (data.type === 'SCORM') {
+        (fileUpdate as any).scormUrl = uploadedFile.url;
+        (fileUpdate as any).scormPackageId = uploadedFile.scormPackageId;
+      }
     }
     
     updateSession(moduleId, session.id, { ...data, ...fileUpdate });
@@ -168,6 +223,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
             <option value="Video">Video</option>
             <option value="PDF">PDF</option>
             <option value="PPT">PPT</option>
+            <option value="SCORM">SCORM</option>
           </select>
         </div>
       </div>
@@ -189,19 +245,22 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
         "p-4 rounded-xl border transition-all",
         sessionType === 'Video' ? "border-blue-500/20 bg-blue-500/5" :
         sessionType === 'PDF' ? "border-red-500/20 bg-red-500/5" :
-        "border-orange-500/20 bg-orange-500/5"
+        sessionType === 'PPT' ? "border-orange-500/20 bg-orange-500/5" :
+        "border-purple-500/20 bg-purple-500/5"
       )}>
         <div className="flex items-center gap-2 mb-4">
           {sessionType === 'Video' && <Video className="w-4 h-4 text-blue-500" />}
           {sessionType === 'PDF' && <FileText className="w-4 h-4 text-red-500" />}
           {sessionType === 'PPT' && <Presentation className="w-4 h-4 text-orange-500" />}
+          {sessionType === 'SCORM' && <FileUp className="w-4 h-4 text-purple-500" />}
           <span className={cn(
             "text-sm font-bold uppercase tracking-wider",
             sessionType === 'Video' ? "text-blue-500" :
             sessionType === 'PDF' ? "text-red-500" :
-            "text-orange-500"
+            sessionType === 'PPT' ? "text-orange-500" :
+            "text-purple-500"
           )}>
-            {sessionType === 'PDF' ? "PDF / Document" : sessionType} Content
+            {sessionType === 'PDF' ? "PDF / Document" : sessionType === 'SCORM' ? "SCORM Package" : sessionType} Content
           </span>
         </div>
 
@@ -213,7 +272,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
           accept={
             sessionType === 'Video' ? "video/*" :
             sessionType === 'PDF' ? ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.rtf,.odt" :
-            ".ppt,.pptx,.key"
+            sessionType === 'PPT' ? ".ppt,.pptx,.key" :
+            ".zip"
           }
         />
 
@@ -228,14 +288,15 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
                   "w-10 h-10 rounded-lg flex items-center justify-center animate-pulse",
                   sessionType === 'Video' ? "bg-blue-500/10 text-blue-500" :
                   sessionType === 'PDF' ? "bg-red-500/10 text-red-500" :
-                  "bg-orange-500/10 text-orange-500"
+                  sessionType === 'PPT' ? "bg-orange-500/10 text-orange-500" :
+                  "bg-purple-500/10 text-purple-500"
                 )}>
                   <Upload className="w-5 h-5 animate-bounce" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold truncate max-w-[200px]">Uploading to cloud...</p>
+                  <p className="text-xs font-bold truncate max-w-[200px]">Uploading content...</p>
                   <p className="text-[10px] text-surface-400 font-semibold uppercase tracking-wider">
-                    {!isS3Configured() ? "Simulating AWS S3..." : "Directing to Amazon S3..."}
+                    {sessionType === 'SCORM' ? "Uploading SCORM package..." : (!isS3Configured() ? "Simulating AWS S3..." : "Directing to Amazon S3...")}
                   </p>
                 </div>
               </div>
@@ -256,7 +317,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
                   "h-full rounded-full transition-all duration-300 ease-out",
                   sessionType === 'Video' ? "bg-blue-500" :
                   sessionType === 'PDF' ? "bg-red-500" :
-                  "bg-orange-500"
+                  sessionType === 'PPT' ? "bg-orange-500" :
+                  "bg-purple-500"
                 )}
                 style={{ width: `${uploadProgress}%` }}
               />
@@ -273,7 +335,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
                   "w-10 h-10 rounded-lg flex items-center justify-center",
                   sessionType === 'Video' ? "bg-blue-500/10 text-blue-500" :
                   sessionType === 'PDF' ? "bg-red-500/10 text-red-500" :
-                  "bg-orange-500/10 text-orange-500"
+                  sessionType === 'PPT' ? "bg-orange-500/10 text-orange-500" :
+                  "bg-purple-500/10 text-purple-500"
                 )}>
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
@@ -335,14 +398,16 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
               "w-full flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-xl transition-all group",
               sessionType === 'Video' ? "border-blue-500/30 hover:bg-blue-500/10" :
               sessionType === 'PDF' ? "border-red-500/30 hover:bg-red-500/10" :
-              "border-orange-500/30 hover:bg-orange-500/10"
+              sessionType === 'PPT' ? "border-orange-500/30 hover:bg-orange-500/10" :
+              "border-purple-500/30 hover:bg-purple-500/10"
             )}
           >
             <div className={cn(
               "w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-transform group-hover:scale-110",
               sessionType === 'Video' ? "bg-blue-500/10 text-blue-500" :
               sessionType === 'PDF' ? "bg-red-500/10 text-red-500" :
-              "bg-orange-500/10 text-orange-500"
+              sessionType === 'PPT' ? "bg-orange-500/10 text-orange-500" :
+              "bg-purple-500/10 text-purple-500"
             )}>
               <FileUp className="w-6 h-6" />
             </div>
@@ -350,14 +415,16 @@ export const SessionForm: React.FC<SessionFormProps> = ({ session, moduleId, onC
               "text-sm font-bold",
               sessionType === 'Video' ? "text-blue-600" :
               sessionType === 'PDF' ? "text-red-600" :
-              "text-orange-600"
+              sessionType === 'PPT' ? "text-orange-600" :
+              "text-purple-600"
             )}>
-              Click to upload {sessionType === 'PDF' ? "PDF / Document" : sessionType}
+              Click to upload {sessionType === 'PDF' ? "PDF / Document" : sessionType === 'SCORM' ? "SCORM ZIP package" : sessionType}
             </p>
             <p className="text-[10px] text-surface-400 mt-1">
               {sessionType === 'Video' ? "MP4, MOV, WEBM (Max 500MB)" :
                sessionType === 'PDF' ? "PDF, DOC, DOCX, TXT, XLS, XLSX (Max 50MB)" :
-               "PPT, PPTX, KEY (Max 100MB)"}
+               sessionType === 'PPT' ? "PPT, PPTX, KEY (Max 100MB)" :
+               "ZIP package containing imsmanifest.xml (Max 100MB)"}
             </p>
           </button>
         )}

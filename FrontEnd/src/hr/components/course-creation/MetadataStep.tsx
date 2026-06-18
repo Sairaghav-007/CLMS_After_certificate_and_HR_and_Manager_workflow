@@ -16,6 +16,8 @@ const metadataSchema = z.object({
   passingScore: z.number().min(0).max(100),
   maxAttempts: z.number().min(1),
   category: z.enum(['Mandatory', 'Elective', 'Department-Oriented']),
+  startDate: z.string().optional().or(z.literal('')),
+  endDate: z.string().optional().or(z.literal('')),
 });
 
 type MetadataFormValues = z.infer<typeof metadataSchema>;
@@ -33,6 +35,11 @@ export const MetadataStep: React.FC<MetadataStepProps> = ({ onNext }) => {
   const [generatedThumbs, setGeneratedThumbs] = useState<string[]>([]);
   const [selectedThumb, setSelectedThumb] = useState<string | null>(currentCourse.thumbnail || null);
 
+  const [objectives, setObjectives] = useState<string[]>(currentCourse.objectives || []);
+  const [learningOutcomes, setLearningOutcomes] = useState<string[]>(currentCourse.learningOutcomes || []);
+  const [newObjective, setNewObjective] = useState('');
+  const [newOutcome, setNewOutcome] = useState('');
+
   const {
     register,
     handleSubmit,
@@ -46,6 +53,8 @@ export const MetadataStep: React.FC<MetadataStepProps> = ({ onNext }) => {
       passingScore: currentCourse.passingScore || 70,
       maxAttempts: currentCourse.maxAttempts || 3,
       category: currentCourse.category || 'Mandatory' as CourseCategory,
+      startDate: currentCourse.startDate || '',
+      endDate: currentCourse.endDate || '',
     },
   });
 
@@ -53,7 +62,12 @@ export const MetadataStep: React.FC<MetadataStepProps> = ({ onNext }) => {
   const description = watch('description');
 
   const onSubmit = (data: MetadataFormValues) => {
-    updateMetadata({ ...data, thumbnail: selectedThumb || undefined });
+    updateMetadata({ 
+      ...data, 
+      thumbnail: selectedThumb || undefined,
+      objectives,
+      learningOutcomes,
+    });
     onNext();
   };
 
@@ -108,6 +122,7 @@ export const MetadataStep: React.FC<MetadataStepProps> = ({ onNext }) => {
                 <p className="text-right text-[10px] text-surface-400">{title?.length || 0}/100</p>
               </div>
 
+
               {/* Description */}
               <div className="space-y-2">
                 <label className="text-sm font-semibold">Course Description</label>
@@ -122,6 +137,148 @@ export const MetadataStep: React.FC<MetadataStepProps> = ({ onNext }) => {
                 />
                 {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
                 <p className="text-right text-[10px] text-surface-400">{description?.length || 0}/1000</p>
+              </div>
+
+              {/* Start & End Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">Start Date</label>
+                  <input
+                    type="date"
+                    {...register('startDate')}
+                    className={cn(
+                      "w-full px-4 py-3 rounded-xl border transition-all focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
+                      isDark ? "bg-surface-800 border-surface-700" : "bg-surface-50 border-surface-200"
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">End Date</label>
+                  <input
+                    type="date"
+                    {...register('endDate')}
+                    className={cn(
+                      "w-full px-4 py-3 rounded-xl border transition-all focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
+                      isDark ? "bg-surface-800 border-surface-700" : "bg-surface-50 border-surface-200"
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Course Objectives */}
+              <div className="space-y-3">
+                <label className="text-sm font-semibold">Course Objectives</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="objective-input"
+                    value={newObjective}
+                    onChange={(e) => setNewObjective(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newObjective.trim()) {
+                          setObjectives([...objectives, newObjective.trim()]);
+                          setNewObjective('');
+                        }
+                      }
+                    }}
+                    placeholder="e.g. Identify security risks and phishing emails"
+                    className={cn(
+                      "flex-1 px-4 py-2.5 rounded-xl border transition-all focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
+                      isDark ? "bg-surface-800 border-surface-700" : "bg-surface-50 border-surface-200"
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newObjective.trim()) {
+                        setObjectives([...objectives, newObjective.trim()]);
+                        setNewObjective('');
+                      }
+                    }}
+                    className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold text-xs transition-all"
+                  >
+                    Add
+                  </button>
+                </div>
+                {objectives.length > 0 && (
+                  <ul className={cn(
+                    "p-4 rounded-xl border space-y-2 max-h-48 overflow-y-auto",
+                    isDark ? "bg-surface-800/50 border-surface-700" : "bg-surface-50/50 border-surface-200"
+                  )}>
+                    {objectives.map((obj, index) => (
+                      <li key={index} className="flex justify-between items-center text-sm gap-2">
+                        <span className="flex-1 line-clamp-2">{obj}</span>
+                        <button
+                          type="button"
+                          onClick={() => setObjectives(objectives.filter((_, i) => i !== index))}
+                          className="text-red-500 hover:text-red-600 text-xs font-semibold px-2 py-1 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Learning Outcomes */}
+              <div className="space-y-3">
+                <label className="text-sm font-semibold">Learning Outcomes</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="outcome-input"
+                    value={newOutcome}
+                    onChange={(e) => setNewOutcome(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newOutcome.trim()) {
+                          setLearningOutcomes([...learningOutcomes, newOutcome.trim()]);
+                          setNewOutcome('');
+                        }
+                      }
+                    }}
+                    placeholder="e.g. Implement password policies correctly"
+                    className={cn(
+                      "flex-1 px-4 py-2.5 rounded-xl border transition-all focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
+                      isDark ? "bg-surface-800 border-surface-700" : "bg-surface-50 border-surface-200"
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newOutcome.trim()) {
+                        setLearningOutcomes([...learningOutcomes, newOutcome.trim()]);
+                        setNewOutcome('');
+                      }
+                    }}
+                    className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold text-xs transition-all"
+                  >
+                    Add
+                  </button>
+                </div>
+                {learningOutcomes.length > 0 && (
+                  <ul className={cn(
+                    "p-4 rounded-xl border space-y-2 max-h-48 overflow-y-auto",
+                    isDark ? "bg-surface-800/50 border-surface-700" : "bg-surface-50/50 border-surface-200"
+                  )}>
+                    {learningOutcomes.map((out, index) => (
+                      <li key={index} className="flex justify-between items-center text-sm gap-2">
+                        <span className="flex-1 line-clamp-2">{out}</span>
+                        <button
+                          type="button"
+                          onClick={() => setLearningOutcomes(learningOutcomes.filter((_, i) => i !== index))}
+                          className="text-red-500 hover:text-red-600 text-xs font-semibold px-2 py-1 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </div>

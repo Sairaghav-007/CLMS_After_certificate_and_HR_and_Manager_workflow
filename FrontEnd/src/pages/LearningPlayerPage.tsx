@@ -20,6 +20,7 @@ import { useCourseStore, useUIStore, useNotesStore } from '@/shared/store';
 import { ModuleResourceType, CourseCategory, CompletionStatus } from '@/shared/types';
 import { SecureVideoPlayer, type SecureVideoPlayerHandle } from '../features/learning-player/SecureVideoPlayer';
 import { DocumentViewer } from '../features/learning-player/DocumentViewer';
+import { ScormPlayer } from '../features/learning-player/ScormPlayer';
 import { NotesDrawer } from '../features/learning-player/NotesDrawer';
 import { useNotes } from '../features/learning-player/hooks/useNotes';
 import { cn, formatMinutes } from '@/shared/utils';
@@ -67,6 +68,7 @@ export function LearningPlayerPage() {
                 PDF: 'pdf',
                 PPT: 'ppt',
                 DOCUMENT: 'reading',
+                SCORM: 'scorm',
               };
               return {
                 id: String(s.id),
@@ -77,6 +79,9 @@ export function LearningPlayerPage() {
                 isCompleted: s.isCompleted !== undefined ? s.isCompleted : (existingR?.isCompleted || false),
                 progress: s.progress !== undefined ? s.progress : (existingR?.progress || 0),
                 totalPages: s.totalPages,
+                scormPackageUuid: s.scormPackageUuid,
+                scormEntryPath: s.scormEntryPath,
+                scormVersion: s.scormVersion,
               };
             });
             const completedCount = resources.filter((r: any) => r.isCompleted).length;
@@ -331,7 +336,7 @@ export function LearningPlayerPage() {
               </div>
 
               {/* Secure Media viewports */}
-              <div className="flex-1 flex items-center justify-center min-h-[350px] mb-6">
+              <div className="flex-1 flex items-center justify-center min-h-[350px] mb-6 animate-fade-in w-full">
                  {currentResource.type === ModuleResourceType.VIDEO && (
                    <SecureVideoPlayer 
                     ref={videoPlayerRef}
@@ -347,6 +352,15 @@ export function LearningPlayerPage() {
                     url={currentResource.url}
                     totalPages={currentResource.totalPages || 8}
                     onPageChange={(curr, total) => handleProgress(curr, total)}
+                    onComplete={handleResourceComplete}
+                   />
+                 )}
+                 {currentResource.type === ModuleResourceType.SCORM && (
+                   <ScormPlayer
+                    sectionId={currentResource.id}
+                    packageUuid={currentResource.scormPackageUuid || ''}
+                    entryPath={currentResource.scormEntryPath || ''}
+                    scormVersion={currentResource.scormVersion || '1.2'}
                     onComplete={handleResourceComplete}
                    />
                  )}
