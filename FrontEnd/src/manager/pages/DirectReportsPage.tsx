@@ -21,11 +21,29 @@ export default function DirectReportsPage() {
   const addLog = useAuditStore(s => s.addLog);
   const pageSize = 10;
 
+  const [subFilterValue, setSubFilterValue] = useState('');
+  const [teams, setTeams] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [allEmployeesForFilter, setAllEmployeesForFilter] = useState<Employee[]>([]);
+
+  // Fetch groups and teams on mount
+  useEffect(() => {
+    api.get('/manager/teams').then(res => setTeams(res.data)).catch(() => {});
+    api.get('/manager/groups').then(res => setGroups(res.data)).catch(() => {});
+  }, []);
+
   const fetchEmployees = async (showSkeleton = true) => {
     if (showSkeleton) setIsLoading(true);
     try {
-      const res = await api.get('/manager/employees');
+      let url = '/manager/employees';
+      if (filterCategory !== 'Individual' && subFilterValue) {
+        url += `?category=${filterCategory}&value=${encodeURIComponent(subFilterValue)}`;
+      }
+      const res = await api.get(url);
       setEmployees(res.data);
+      if (!subFilterValue || filterCategory === 'Individual') {
+        setAllEmployeesForFilter(res.data);
+      }
     } catch (err) {
       console.error("Failed to load direct reports", err);
     } finally {
@@ -35,13 +53,28 @@ export default function DirectReportsPage() {
 
   useEffect(() => {
     fetchEmployees(true);
+  }, [filterCategory, subFilterValue]);
 
+  useEffect(() => {
     const interval = setInterval(() => {
       fetchEmployees(false);
     }, 15000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [filterCategory, subFilterValue]);
+
+  // Reset subFilterValue when category changes
+  useEffect(() => {
+    setSubFilterValue('');
+  }, [filterCategory]);
+
+  const departments = useMemo(() => {
+    const depts = new Set<string>();
+    allEmployeesForFilter.forEach(emp => {
+      if (emp.department) depts.add(emp.department);
+    });
+    return Array.from(depts);
+  }, [allEmployeesForFilter]);
 
   // Update selectedEmployee reference if it changes during polling
   useEffect(() => {
@@ -85,10 +118,9 @@ export default function DirectReportsPage() {
       const nameMatch = emp.name ? emp.name.toLowerCase().includes(term) : false;
       const idMatch = emp.id ? emp.id.toLowerCase().includes(term) : false;
       const matchSearch = !term || nameMatch || idMatch;
-      const matchFilter = filterCategory === 'Individual' || emp.department === filterCategory || emp.team === filterCategory || emp.group === filterCategory;
-      return matchSearch && matchFilter;
+      return matchSearch;
     });
-  }, [employees, search, filterCategory]);
+  }, [employees, search]);
 
   const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const totalPages = Math.ceil(filtered.length / pageSize);
@@ -178,6 +210,28 @@ export default function DirectReportsPage() {
         search={search}
         onSearchChange={(q) => { setSearch(q); setCurrentPage(1); }}
         searchPlaceholder="Search by Employee ID or Name..."
+        extra={
+          filterCategory !== 'Individual' && (
+            <div className="flex items-center gap-2">
+              <select
+                value={subFilterValue}
+                onChange={(e) => { setSubFilterValue(e.target.value); setCurrentPage(1); }}
+                className="h-10 px-3 rounded-btn bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-xs text-black focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+              >
+                <option value="">Select {filterCategory}...</option>
+                {filterCategory === 'Team' && teams.map((team) => (
+                  <option key={team.teamId} value={team.teamId}>{team.name}</option>
+                ))}
+                {filterCategory === 'Group' && groups.map((group) => (
+                  <option key={group.id} value={group.id}>{group.name}</option>
+                ))}
+                {filterCategory === 'Department' && departments.map((dept) => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+            </div>
+          )
+        }
       />
 
       {/* Table */}
@@ -264,23 +318,6 @@ export default function DirectReportsPage() {
                             title="View Details"
                           >
                             <Eye className="w-3.5 h-3.5" />
-                          </motion.button>
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => handleSendReminder(emp)}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-surface-400 hover:text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-900/20 transition-all cursor-pointer"
-                            title="Send Nudge Warning"
-                          >
-                            <Send className="w-3.5 h-3.5" />
-                          </motion.button>
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-surface-400 hover:text-accent-500 hover:bg-accent-50 dark:hover:bg-accent-900/20 transition-all cursor-pointer"
-                            title="Assign Course"
-                          >
-                            <BookPlus className="w-3.5 h-3.5" />
                           </motion.button>
                         </div>
                       </td>

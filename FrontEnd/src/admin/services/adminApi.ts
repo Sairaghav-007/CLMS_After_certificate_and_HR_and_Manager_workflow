@@ -23,3 +23,12 @@ export const courseApi = {
   getById: (id: string) => api.get(`/admin/courses/${id}`).then(r => r.data),
   remove: (id: string) => api.delete(`/admin/courses/${id}`),
 };
+
+// ─── Team API ─────────────────────────────────────────────
+export const teamApi = {
+  getAll: () => api.get('/admin/teams').then(r => r.data),
+  create: (team: object) => api.post('/admin/teams', team).then(r => r.data),
+  update: (id: string, team: object) => api.put(`/admin/teams/${id}`, team).then(r => r.data),
+  remove: (id: string) => api.delete(`/admin/teams/${id}`),
+};
+

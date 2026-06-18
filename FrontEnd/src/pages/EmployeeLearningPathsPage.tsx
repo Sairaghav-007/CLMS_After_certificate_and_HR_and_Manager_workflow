@@ -54,7 +54,7 @@ export function EmployeeLearningPathsPage() {
           coursesRes.data.map((c: any) => ({
             id: String(c.id),
             title: c.title,
-            progressPercent: c.progressPercent ?? 0,
+            progressPercent: c.progress ?? c.progressPercent ?? 0,
             status: c.status ?? 'NOT_STARTED',
             dueDate: c.dueDate ?? '',
           }))

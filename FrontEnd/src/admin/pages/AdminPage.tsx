@@ -23,11 +23,25 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '@/shared/store';
 import { formatDate } from '@/shared/utils';
-import { userApi, learningPathApi, courseApi } from '@/admin/services/adminApi';
+import { userApi, learningPathApi, courseApi, teamApi } from '@/admin/services/adminApi';
 import { api } from '@/api/client';
 import { deleteFileFromS3 } from '@/hr/lib/s3';
 
 // Types
+interface TeamEmployee {
+  uniqueId: string;
+  email: string;
+  fullName: string;
+  department: string;
+  designation: string;
+}
+
+interface Team {
+  teamId: string;
+  name: string;
+  employees: TeamEmployee[];
+}
+
 interface Account {
   uniqueId: string;
   email: string;
@@ -66,34 +80,40 @@ const staticViolations = [
 ];
 
 export function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'accounts' | 'paths' | 'courses'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'accounts' | 'paths' | 'courses' | 'teams'>('overview');
 
   // Data States — populated from backend
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [paths, setPaths] = useState<LearningPath[]>([]);
   const [courses, setCourses] = useState<CourseAssign[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [violations] = useState(staticViolations);
 
   // Loading states
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [loadingPaths, setLoadingPaths]  = useState(true);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [loadingTeams, setLoadingTeams] = useState(true);
 
   // Filters & Search
   const [accountSearch, setAccountSearch] = useState('');
   const [pathSearch, setPathSearch] = useState('');
+  const [teamSearch, setTeamSearch] = useState('');
   const [courseCategoryFilter, setCourseCategoryFilter] = useState<'All' | 'Mandatory' | 'Departmental' | 'Elective'>('All');
 
   // Modal Control States
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showPathModal, setShowPathModal] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
 
   // Edit target states
   const [editAccountTarget, setEditAccountTarget] = useState<Account | null>(null);
   const [editPathTarget, setEditPathTarget] = useState<LearningPath | null>(null);
+  const [editTeamTarget, setEditTeamTarget] = useState<Team | null>(null);
 
-  // Detail View State (Retrieve Learning Path)
+  // Detail View State (Retrieve Learning Path/Team)
   const [selectedPathDetails, setSelectedPathDetails] = useState<LearningPath | null>(null);
+  const [selectedTeamDetails, setSelectedTeamDetails] = useState<Team | null>(null);
 
   const addToast = useUIStore((s) => s.addToast);
 
@@ -133,20 +153,35 @@ export function AdminPage() {
       setLoadingCourses(false);
     }
   }, [addToast]);
+
+  const fetchTeams = useCallback(async () => {
+    setLoadingTeams(true);
+    try {
+      const data = await teamApi.getAll();
+      setTeams(data);
+    } catch {
+      addToast({ type: 'error', title: 'API Error', message: 'Could not load teams.' });
+    } finally {
+      setLoadingTeams(false);
+    }
+  }, [addToast]);
+
   useEffect(() => {
     fetchAccounts();
     fetchPaths();
     fetchCourses();
+    fetchTeams();
 
     const interval = setInterval(() => {
       // Fetch silently in the background
       userApi.getAll().then(setAccounts).catch(() => {});
       learningPathApi.getAll().then(setPaths).catch(() => {});
       courseApi.getAll().then(setCourses).catch(() => {});
+      teamApi.getAll().then(setTeams).catch(() => {});
     }, 15000); // Poll every 15 seconds
 
     return () => clearInterval(interval);
-  }, [fetchAccounts, fetchPaths, fetchCourses]);
+  }, [fetchAccounts, fetchPaths, fetchCourses, fetchTeams]);
   // Form States
   const [accountForm, setAccountForm] = useState({
     uniqueId: '',
@@ -295,6 +330,68 @@ export function AdminPage() {
     setSelectedPathDetails(path);
   };
 
+  // --- TEAM CRUD HANDLERS ---
+  const [teamForm, setTeamForm] = useState({
+    teamId: '',
+    name: '',
+    employeeIds: [] as string[]
+  });
+
+  const handleOpenCreateTeam = () => {
+    setEditTeamTarget(null);
+    setTeamForm({
+      teamId: '',
+      name: '',
+      employeeIds: []
+    });
+    setShowTeamModal(true);
+  };
+
+  const handleOpenEditTeam = (team: Team) => {
+    setEditTeamTarget(team);
+    setTeamForm({
+      teamId: team.teamId,
+      name: team.name,
+      employeeIds: team.employees ? team.employees.map(e => e.uniqueId) : []
+    });
+    setShowTeamModal(true);
+  };
+
+  const handleSaveTeam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teamForm.teamId || !teamForm.name) {
+      addToast({ type: 'error', title: 'Missing Fields', message: 'Please provide team ID and team name.' });
+      return;
+    }
+    try {
+      if (editTeamTarget) {
+        await teamApi.update(editTeamTarget.teamId, teamForm);
+        addToast({ type: 'success', title: 'Team Updated', message: `Successfully updated team "${teamForm.name}".` });
+      } else {
+        await teamApi.create(teamForm);
+        addToast({ type: 'success', title: 'Team Created', message: `Successfully created team "${teamForm.name}".` });
+      }
+      setShowTeamModal(false);
+      fetchTeams();
+    } catch (err: any) {
+      const errMsg = err.response?.data || 'Could not save team. Please check if Team ID is unique.';
+      addToast({ type: 'error', title: 'Save Failed', message: typeof errMsg === 'string' ? errMsg : 'Could not save team.' });
+    }
+  };
+
+  const handleRemoveTeam = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete team "${name}"?`)) {
+      try {
+        await teamApi.remove(id);
+        if (selectedTeamDetails?.teamId === id) setSelectedTeamDetails(null);
+        addToast({ type: 'success', title: 'Team Deleted', message: `Successfully deleted team "${name}".` });
+        fetchTeams();
+      } catch {
+        addToast({ type: 'error', title: 'Delete Failed', message: 'Could not delete team. Please try again.' });
+      }
+    }
+  };
+
   // --- COURSE ASSIGNMENT HANDLERS ---
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -355,6 +452,11 @@ export function AdminPage() {
     ? courses 
     : courses.filter(c => c.category === courseCategoryFilter);
 
+  const filteredTeams = teams.filter(t => 
+    t.name.toLowerCase().includes(teamSearch.toLowerCase()) ||
+    t.teamId.toLowerCase().includes(teamSearch.toLowerCase())
+  );
+
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-8 font-sans">
       
@@ -370,6 +472,7 @@ export function AdminPage() {
           {[
             { id: 'overview', label: 'Overview', icon: LayoutDashboard },
             { id: 'accounts', label: 'Accounts Manager', icon: Users },
+            { id: 'teams', label: 'Team Management', icon: Building2 },
             { id: 'paths', label: 'Learning Paths', icon: FolderKanban },
             { id: 'courses', label: 'Courses Database', icon: BookOpen },
           ].map((tab) => (
@@ -555,6 +658,149 @@ export function AdminPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* --- TEAM MANAGEMENT TAB --- */}
+      {activeTab === 'teams' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Teams List */}
+          <div className="lg:col-span-2 bg-white rounded-3xl border border-surface-200 p-6 space-y-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h3 className="text-lg font-black text-surface-900">Teams Directory</h3>
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+                  <input
+                    type="text"
+                    placeholder="Search teams..."
+                    value={teamSearch}
+                    onChange={(e) => setTeamSearch(e.target.value)}
+                    className="pl-9 pr-4 py-2.5 rounded-xl border border-surface-200 text-xs focus:ring-2 focus:ring-accent-500/20 focus:border-accent-400 focus:outline-none w-full sm:w-48 transition-all"
+                  />
+                </div>
+                <button
+                  onClick={handleOpenCreateTeam}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-accent-600 text-white rounded-xl font-bold text-xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
+                >
+                  <Plus size={14} />
+                  Create Team
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {loadingTeams ? (
+                <div className="flex items-center justify-center gap-2 text-surface-400 py-10">
+                  <Loader2 size={18} className="animate-spin" />
+                  <span className="text-sm font-semibold">Loading teams from backend...</span>
+                </div>
+              ) : filteredTeams.length === 0 ? (
+                <div className="text-center text-surface-400 text-sm font-semibold py-10">
+                  No teams found. Click "Create Team" to create one.
+                </div>
+              ) : filteredTeams.map((team) => (
+                <div 
+                  key={team.teamId}
+                  className={cn(
+                    'p-5 border rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4 transition-all',
+                    selectedTeamDetails?.teamId === team.teamId 
+                      ? 'border-accent-400 bg-accent-50/20 shadow-md shadow-accent-500/5' 
+                      : 'border-surface-200 hover:border-surface-300 bg-surface-50/30'
+                  )}
+                >
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-bold text-surface-900 truncate">{team.name}</h4>
+                      <span className="text-[9px] px-2 py-0.5 bg-white text-surface-500 border border-surface-200 font-black rounded uppercase tracking-wider">
+                        ID: {team.teamId}
+                      </span>
+                    </div>
+                    <p className="text-xs text-surface-500 font-semibold">{team.employees?.length || 0} Members</p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
+                    <button
+                      onClick={() => setSelectedTeamDetails(team)}
+                      className="px-3 py-1.5 rounded-lg border border-surface-200 text-xs font-bold text-surface-600 hover:bg-white transition-all cursor-pointer"
+                    >
+                      View Members List
+                    </button>
+                    <button
+                      onClick={() => handleOpenEditTeam(team)}
+                      className="p-2 rounded-lg border border-surface-200 text-surface-500 hover:text-accent-600 hover:border-accent-100 hover:bg-white transition-all cursor-pointer"
+                      title="Edit Team"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    <button
+                      onClick={() => handleRemoveTeam(team.teamId, team.name)}
+                      className="p-2 rounded-lg border border-surface-200 text-surface-500 hover:text-danger-600 hover:border-danger-100 hover:bg-white transition-all cursor-pointer"
+                      title="Delete Team"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Team Details Panel */}
+          <div className="bg-white rounded-3xl border border-surface-200 p-6 shadow-sm flex flex-col justify-between min-h-[300px]">
+            {selectedTeamDetails ? (
+              <div className="space-y-6">
+                <div className="flex items-start justify-between">
+                  <h3 className="text-base font-black text-surface-900">Team Details</h3>
+                  <button 
+                    onClick={() => setSelectedTeamDetails(null)}
+                    className="p-1 rounded-lg hover:bg-surface-50 text-surface-400"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-[9px] uppercase tracking-wider font-black text-accent-600 bg-accent-50 px-2 py-0.5 rounded border border-accent-100">
+                      ID: {selectedTeamDetails.teamId}
+                    </span>
+                    <h4 className="text-lg font-black text-surface-950 mt-2">{selectedTeamDetails.name}</h4>
+                  </div>
+
+                  <div>
+                    <h5 className="text-xs font-bold text-surface-800 mb-2">Team Members</h5>
+                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                      {!selectedTeamDetails.employees || selectedTeamDetails.employees.length === 0 ? (
+                        <p className="text-xs text-surface-400 font-semibold italic">No members in this team yet.</p>
+                      ) : (
+                        selectedTeamDetails.employees.map((member) => (
+                          <div key={member.uniqueId} className="flex items-center justify-between p-2.5 bg-surface-50 rounded-lg text-xs font-bold border border-surface-200 text-left">
+                            <div className="min-w-0">
+                              <span className="block text-surface-900 truncate">{member.fullName}</span>
+                              <span className="block text-[10px] text-surface-400 font-semibold truncate">{member.email}</span>
+                            </div>
+                            <span className="text-surface-500 font-semibold text-[10px] whitespace-nowrap ml-2">{member.department || 'N/A'}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center flex-1">
+                <Building2 size={48} className="text-surface-200 mb-3" />
+                <h4 className="text-sm font-bold text-surface-700">No details loaded</h4>
+                <p className="text-xs text-surface-400 mt-1 max-w-[200px]">Click the "View Members List" button on any team to see assigned employees.</p>
+              </div>
+            )}
+            
+            <div className="border-t border-surface-150 pt-4 mt-6 flex justify-between items-center text-[10px] font-bold text-surface-400">
+              <span>Team Manager v1.0</span>
+              <span className="text-accent-500">CLMS Enterprise</span>
+            </div>
           </div>
         </div>
       )}
@@ -1070,10 +1316,98 @@ export function AdminPage() {
         )}
       </AnimatePresence>
 
+      {/* --- TEAM MODAL (CREATE & EDIT) --- */}
+      <AnimatePresence>
+        {showTeamModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl border border-surface-200 shadow-2xl max-w-md w-full overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-surface-100 flex items-center justify-between">
+                <h4 className="text-lg font-black text-surface-900">
+                  {editTeamTarget ? 'Edit Team' : 'Create Team'}
+                </h4>
+                <button 
+                  onClick={() => setShowTeamModal(false)}
+                  className="p-1 rounded-lg hover:bg-surface-50 text-surface-400"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveTeam} className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-surface-500 uppercase tracking-wider">Team ID</label>
+                  <input
+                    type="text"
+                    required
+                    disabled={!!editTeamTarget}
+                    placeholder="e.g. ENG-DEV"
+                    value={teamForm.teamId}
+                    onChange={(e) => setTeamForm({ ...teamForm, teamId: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-surface-200 text-sm focus:ring-2 focus:ring-accent-500/20 focus:border-accent-400 focus:outline-none transition-all disabled:opacity-50 disabled:bg-surface-100"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-surface-500 uppercase tracking-wider">Team Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Engineering Developers"
+                    value={teamForm.name}
+                    onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-surface-200 text-sm focus:ring-2 focus:ring-accent-500/20 focus:border-accent-400 focus:outline-none transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-surface-500 uppercase tracking-wider block mb-1">Assign Employees</label>
+                  <div className="border border-surface-200 rounded-xl p-3 bg-surface-50 max-h-48 overflow-y-auto space-y-2 text-left">
+                    {accounts.filter(a => a.role === 'Employee').map((emp) => {
+                      const isChecked = teamForm.employeeIds.includes(emp.uniqueId);
+                      const empName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.email;
+                      return (
+                        <label key={emp.uniqueId} className="flex items-center gap-2 text-xs font-semibold text-surface-700 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setTeamForm(prev => ({ ...prev, employeeIds: [...prev.employeeIds, emp.uniqueId] }));
+                              } else {
+                                setTeamForm(prev => ({ ...prev, employeeIds: prev.employeeIds.filter(id => id !== emp.uniqueId) }));
+                              }
+                            }}
+                            className="rounded text-accent-600 focus:ring-accent-500"
+                          />
+                          <span>{empName} ({emp.email})</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-accent-600 hover:bg-accent-500 text-white rounded-2xl font-bold text-sm shadow-xl shadow-accent-500/15 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer mt-4"
+                >
+                  <Send size={16} />
+                  Save Details
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
 }
+
 
 // Simple cn helper for classes
 function cn(...classes: any[]) {

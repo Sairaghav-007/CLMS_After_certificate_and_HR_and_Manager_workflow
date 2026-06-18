@@ -1,53 +1,86 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   CheckCircle2, Clock, BarChart3, AlertTriangle, Loader2
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, AreaChart, Area
+  ResponsiveContainer, Cell, LabelList
 } from 'recharts';
-import { PageHeader, FilterBar, KPICard, ExportButton } from '../components/ui';
+import { PageHeader, KPICard, ExportButton } from '../components/ui';
 import { useAuditStore } from '../stores';
 import { exportData } from '../lib/exportUtils';
 import { api } from '@/api/client';
 
-interface EmployeeRow {
-  id: string;
+interface TeamRow {
+  teamId: string;
   name: string;
-  department: string;
-  designation: string;
-  completedCourses: number;
-  assignedCourses: number;
+  averageCompletion: number;
+  status: string;
   learningHours: number;
   averageQuizScore: number;
-  status: string;
+  nonCompliantCount: number;
+  memberCount: number;
 }
 
-interface TrendPoint {
-  period: string;
-  completed: number;
-  inProgress: number;
-}
+// Custom tooltip for the bar chart
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const val = payload[0].value as number;
+    return (
+      <div style={{
+        background: 'rgba(255,255,255,0.97)',
+        border: 'none',
+        borderRadius: '14px',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
+        padding: '12px 18px',
+        color: '#0f172a',
+        minWidth: 160,
+      }}>
+        <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{label}</p>
+        <p style={{ fontSize: 12, color: '#6366f1', fontWeight: 600 }}>
+          Avg Completion: <span style={{ fontSize: 15 }}>{val}%</span>
+        </p>
+        <div style={{
+          marginTop: 6,
+          height: 4,
+          borderRadius: 99,
+          background: '#e2e8f0',
+          overflow: 'hidden',
+        }}>
+          <div style={{ width: `${val}%`, height: '100%', background: 'linear-gradient(90deg,#6366f1,#a78bfa)', borderRadius: 99 }} />
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+// Pick bar colour based on completion level
+const barColor = (value: number) => {
+  if (value >= 75) return '#22c55e';   // green
+  if (value >= 40) return '#6366f1';   // indigo
+  return '#f59e0b';                    // amber
+};
 
 export default function TeamCompletionPage() {
-  const [filterCategory, setFilterCategory] = useState('Individual');
-  const [search, setSearch] = useState('');
   const [timeframe, setTimeframe] = useState('Monthly');
-  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
-  const [trendData, setTrendData] = useState<TrendPoint[]>([]);
+  const [teams, setTeams] = useState<TeamRow[]>([]);
+  const [metrics, setMetrics] = useState({
+    completionRate: 0,
+    totalHours: 0,
+    avgScore: 0,
+    overdue: 0
+  });
   const [loading, setLoading] = useState(true);
   const addLog = useAuditStore(s => s.addLog);
 
   const loadData = async (showSkeleton = true) => {
     if (showSkeleton) setLoading(true);
     try {
-      const [empRes, trendRes] = await Promise.all([
-        api.get('/manager/employees'),
-        api.get('/manager/dashboard/trend'),
-      ]);
-      setEmployees(empRes.data);
-      setTrendData(trendRes.data);
+      const res = await api.get(`/manager/teams/completion?timeframe=${timeframe}`);
+      setTeams(res.data.teams);
+      setMetrics(res.data.metrics);
     } catch (err) {
       console.error('Failed to load team completion data:', err);
     } finally {
@@ -57,35 +90,25 @@ export default function TeamCompletionPage() {
 
   useEffect(() => {
     loadData(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeframe]);
 
+  useEffect(() => {
     const interval = setInterval(() => {
       loadData(false);
     }, 15000);
-
     return () => clearInterval(interval);
-  }, []);
-
-  // Compute KPI metrics from real data
-  const metrics = useMemo(() => {
-    const totalAssigned = employees.reduce((s, e) => s + (e.assignedCourses ?? 0), 0);
-    const totalCompleted = employees.reduce((s, e) => s + (e.completedCourses ?? 0), 0);
-    const totalHours = employees.reduce((s, e) => s + (e.learningHours ?? 0), 0);
-    const overdue = employees.filter(e => e.status === 'Non-Compliant').length;
-    const avgScore = employees.length > 0
-      ? Math.round(employees.reduce((s, e) => s + (e.averageQuizScore ?? 0), 0) / employees.length)
-      : 0;
-    const completionRate = totalAssigned > 0 ? Math.round((totalCompleted / totalAssigned) * 100) : 0;
-    return { completionRate, totalHours, avgScore, overdue };
-  }, [employees]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeframe]);
 
   const handleExport = (fmt: string) => {
     addLog({ action: 'Report Downloaded', user: 'Manager', details: `Exported Team Completion Report (${fmt})` });
     exportData(fmt, {
       filename: 'team_completion_report',
       title: 'Team Completion Analytics',
-      headers: ['Employee Name', 'Department', 'Designation', 'Completed', 'Assigned', 'Status'],
-      data: employees.map(emp => [emp.name, emp.department, emp.designation, emp.completedCourses, emp.assignedCourses, emp.status]),
-      jsonData: employees.map(emp => ({ Name: emp.name, Dept: emp.department, Role: emp.designation, Completed: emp.completedCourses, Total: emp.assignedCourses, Status: emp.status }))
+      headers: ['Team ID', 'Team Name', 'Average Completion Score', 'Status'],
+      data: teams.map(team => [team.teamId, team.name, `${team.averageCompletion}%`, team.status]),
+      jsonData: teams.map(team => ({ TeamID: team.teamId, TeamName: team.name, AverageCompletion: `${team.averageCompletion}%`, Status: team.status }))
     });
   };
 
@@ -95,6 +118,13 @@ export default function TeamCompletionPage() {
     { title: 'Avg Quiz Score', value: `${metrics.avgScore}%`, icon: BarChart3, gradient: 'gradient-warning', change: { value: 0, label: 'team average' } },
     { title: 'Non-Compliant', value: String(metrics.overdue), icon: AlertTriangle, gradient: 'gradient-danger', change: { value: 0, label: 'employees' } },
   ];
+
+  // Chart data: short name + value
+  const chartData = teams.map(t => ({
+    name: t.name.length > 14 ? t.name.slice(0, 12) + '…' : t.name,
+    fullName: t.name,
+    completion: t.averageCompletion,
+  }));
 
   if (loading) {
     return (
@@ -113,140 +143,176 @@ export default function TeamCompletionPage() {
         actions={<ExportButton onExport={handleExport} />}
       />
 
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpiCards.map((s, i) => (
           <KPICard key={s.title} {...s} delay={i * 0.1} />
         ))}
       </div>
 
-      <FilterBar
-        category={filterCategory}
-        onCategoryChange={setFilterCategory}
-        search={search}
-        onSearchChange={setSearch}
-        extra={
-          <div className="flex items-center gap-2">
-            {['Weekly', 'Monthly', 'Quarterly'].map(t => (
-              <button
-                key={t}
-                onClick={() => setTimeframe(t)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  timeframe === t
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-surface-100 dark:bg-surface-800 text-surface-500'
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        }
-      />
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card rounded-2xl p-6">
-          <h3 className="text-sm font-bold text-surface-900 dark:text-white mb-6">Monthly Completion Trend</h3>
-          {trendData.length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-surface-400 text-xs font-semibold">No data available yet.</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={trendData}>
-                <defs>
-                  <linearGradient id="tcCompleted" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="period" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-                <Area type="monotone" dataKey="completed" stroke="#22c55e" strokeWidth={3} fill="url(#tcCompleted)" name="Completed" />
-                <Area type="monotone" dataKey="inProgress" stroke="#6366f1" strokeWidth={2} strokeDasharray="4 4" fill="transparent" name="In Progress" />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-2xl p-6">
-          <h3 className="text-sm font-bold text-surface-900 dark:text-white mb-6">Department Completion Breakdown</h3>
-          {employees.length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-surface-400 text-xs font-semibold">No data available yet.</div>
-          ) : (() => {
-            // Group by department
-            const deptMap: Record<string, { completed: number; assigned: number }> = {};
-            employees.forEach(emp => {
-              if (!deptMap[emp.department]) deptMap[emp.department] = { completed: 0, assigned: 0 };
-              deptMap[emp.department].completed += emp.completedCourses ?? 0;
-              deptMap[emp.department].assigned += emp.assignedCourses ?? 0;
-            });
-            const deptData = Object.entries(deptMap).map(([dept, v]) => ({
-              dept: dept.length > 10 ? dept.slice(0, 9) + '…' : dept,
-              rate: v.assigned > 0 ? Math.round((v.completed / v.assigned) * 100) : 0,
-            }));
-            return (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={deptData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} unit="%" />
-                  <YAxis dataKey="dept" type="category" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={80} />
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} formatter={(v: any) => [`${v}%`, 'Completion Rate']} />
-                  <Bar dataKey="rate" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={18} />
-                </BarChart>
-              </ResponsiveContainer>
-            );
-          })()}
-        </motion.div>
+      {/* Timeframe Filter Bar */}
+      <div className="glass-card rounded-card p-4 flex items-center justify-between">
+        <span className="text-xs font-bold text-surface-500 uppercase tracking-wider">Time-Based Filter</span>
+        <div className="flex items-center gap-2">
+          {['Weekly', 'Monthly', 'Quarterly'].map(t => (
+            <button
+              key={t}
+              onClick={() => setTimeframe(t)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                timeframe === t
+                  ? 'bg-primary-500 text-white shadow-sm'
+                  : 'bg-surface-100 dark:bg-surface-800 text-surface-500 hover:bg-surface-200 dark:hover:bg-surface-700'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Employee list */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card rounded-2xl overflow-hidden">
-        <div className="p-5 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
-          <h3 className="font-bold text-surface-900 dark:text-white text-sm">Team Members Overview</h3>
-          <span className="text-xs text-surface-500">{employees.length} employees</span>
+      {/* ── Bar Chart ───────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="glass-card rounded-2xl p-6"
+      >
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="font-bold text-surface-900 dark:text-white text-sm">
+              Team Average Completion Score
+            </h3>
+            <p className="text-xs text-surface-500 mt-0.5">
+              {timeframe} view · {teams.length} team{teams.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          {/* Legend */}
+          <div className="hidden sm:flex items-center gap-4 text-[10px] font-semibold text-surface-500">
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#22c55e' }} /> ≥ 75 %
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#6366f1' }} /> 40–74 %
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#f59e0b' }} /> &lt; 40 %
+            </span>
+          </div>
         </div>
-        {employees.length === 0 ? (
-          <div className="p-12 text-center text-surface-400 text-sm font-semibold">No employee data available yet.</div>
+
+        {chartData.length === 0 ? (
+          <div className="h-56 flex items-center justify-center text-sm font-semibold text-surface-400">
+            No teams found — create teams in the Admin panel first.
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart
+              data={chartData}
+              barGap={8}
+              margin={{ top: 18, right: 20, left: 0, bottom: 10 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#e2e8f0"
+                className="dark:opacity-10"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }}
+                axisLine={false}
+                tickLine={false}
+                dy={10}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tickFormatter={v => `${v}%`}
+                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                axisLine={false}
+                tickLine={false}
+                dx={-6}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)', radius: 8 }} />
+              <Bar
+                dataKey="completion"
+                name="Avg Completion"
+                radius={[8, 8, 0, 0]}
+                barSize={36}
+                maxBarSize={56}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={barColor(entry.completion)} />
+                ))}
+                <LabelList
+                  dataKey="completion"
+                  position="top"
+                  formatter={(v: any) => `${v}%`}
+                  style={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </motion.div>
+
+      {/* ── Team Table ──────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="glass-card rounded-2xl overflow-hidden"
+      >
+        <div className="p-5 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
+          <h3 className="font-bold text-surface-900 dark:text-white text-sm">Team Overview</h3>
+          <span className="text-xs text-surface-500">{teams.length} Teams</span>
+        </div>
+        {teams.length === 0 ? (
+          <div className="p-12 text-center text-surface-400 text-sm font-semibold">No team data available yet.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-surface-50 dark:bg-surface-800/50">
-                  {['Employee', 'Department', 'Courses Done', 'Hours', 'Avg Score', 'Status'].map(h => (
+                  {['Team ID', 'Team Name', 'Team Average Completion Score', 'Status'].map(h => (
                     <th key={h} className="px-5 py-3 text-left text-[10px] font-bold text-surface-500 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {employees
-                  .filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()))
-                  .slice(0, 20)
-                  .map((emp) => (
-                    <tr key={emp.id} className="border-b border-surface-100 dark:border-surface-800 hover:bg-surface-50 dark:hover:bg-surface-800/30">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
-                            {emp.name?.charAt(0) ?? 'E'}
-                          </div>
-                          <span className="font-semibold text-surface-900 dark:text-white text-xs">{emp.name}</span>
+                {teams.map((team) => (
+                  <tr key={team.teamId} className="border-b border-surface-100 dark:border-surface-800 hover:bg-surface-50 dark:hover:bg-surface-800/30">
+                    <td className="px-5 py-3 text-xs text-surface-500 font-semibold">{team.teamId}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2 text-left">
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                          {team.name?.charAt(0) ?? 'T'}
                         </div>
-                      </td>
-                      <td className="px-5 py-3 text-xs text-surface-500">{emp.department}</td>
-                      <td className="px-5 py-3 text-xs font-bold text-surface-900 dark:text-white">
-                        {emp.completedCourses}/{emp.assignedCourses}
-                      </td>
-                      <td className="px-5 py-3 text-xs text-surface-500">{emp.learningHours}h</td>
-                      <td className="px-5 py-3 text-xs font-bold text-surface-700">{emp.averageQuizScore}%</td>
-                      <td className="px-5 py-3">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                          emp.status === 'Compliant' ? 'bg-success-50 text-success-700 border border-success-200' :
-                          emp.status === 'Non-Compliant' ? 'bg-danger-50 text-danger-700 border border-danger-200' :
-                          'bg-warning-50 text-warning-700 border border-warning-200'
-                        }`}>{emp.status ?? 'Unknown'}</span>
-                      </td>
-                    </tr>
-                  ))}
+                        <span className="font-semibold text-surface-900 dark:text-white text-xs">{team.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-left">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-surface-900 dark:text-white w-10 shrink-0">{team.averageCompletion}%</span>
+                        <div className="flex-1 h-1.5 bg-surface-100 dark:bg-surface-700 rounded-full overflow-hidden max-w-[120px]">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${Math.min(team.averageCompletion, 100)}%`,
+                              background: barColor(team.averageCompletion),
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-left">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                        team.status === 'Completed' ? 'bg-success-50 text-success-700 border border-success-200' :
+                        team.status === 'In Progress' ? 'bg-primary-50 text-primary-700 border border-primary-200' :
+                        'bg-surface-100 text-surface-700 border border-surface-200'
+                      }`}>{team.status ?? 'Not Started'}</span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

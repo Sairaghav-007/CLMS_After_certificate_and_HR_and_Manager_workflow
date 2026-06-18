@@ -148,6 +148,7 @@ export default function CourseCompliancePage() {
         onCategoryChange={setFilterCategory}
         search={search}
         onSearchChange={setSearch}
+        categories={[]}
       />
 
       <div className="glass-card rounded-2xl overflow-hidden">
@@ -169,7 +170,7 @@ export default function CourseCompliancePage() {
           <table className="w-full">
             <thead>
               <tr className="bg-surface-50/50 dark:bg-surface-800/30">
-                {['Recipient', 'Department', 'Mandatory Course', 'Due Date', 'Score', 'Status', 'Actions'].map(h => (
+                {['Recipient', 'Department', 'Mandatory Course', 'Due Date', 'Score', 'Status'].map(h => (
                   <th key={h} className="px-6 py-3 text-left text-[10px] font-bold text-surface-400 uppercase tracking-widest">{h}</th>
                 ))}
               </tr>
@@ -202,27 +203,6 @@ export default function CourseCompliancePage() {
                       {rec.score > 0 ? `${rec.score}%` : '—'}
                     </td>
                     <td className="px-6 py-4"><StatusBadge status={rec.status} /></td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        {activeTab !== 'Completed' && (
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => handleRemind(rec)}
-                            className="p-1.5 rounded-lg bg-warning-50 dark:bg-warning-900/10 text-warning-600 dark:text-warning-500 hover:bg-warning-100 transition-colors"
-                          >
-                            <Send className="w-3.5 h-3.5" />
-                          </motion.button>
-                        )}
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          className="p-1.5 rounded-lg bg-surface-100 dark:bg-surface-800 text-surface-500 hover:bg-surface-200 transition-colors"
-                        >
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </motion.button>
-                      </div>
-                    </td>
                   </motion.tr>
                 ))}
               </AnimatePresence>

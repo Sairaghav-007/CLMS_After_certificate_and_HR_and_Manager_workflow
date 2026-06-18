@@ -22,6 +22,9 @@ DROP TABLE IF EXISTS questions CASCADE;
 DROP TABLE IF EXISTS course_contents CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS learning_paths CASCADE;
+DROP TABLE IF EXISTS team_members CASCADE;
+DROP TABLE IF EXISTS teams CASCADE;
+
 
 -- 1. Users Table
 CREATE TABLE users (
@@ -231,3 +234,17 @@ CREATE TABLE learning_paths (
     duration integer NOT NULL,
     department character varying(255)
 );
+
+-- 20. Teams Table
+CREATE TABLE teams (
+    team_id character varying(255) PRIMARY KEY,
+    name character varying(255) NOT NULL
+);
+
+-- 21. Team Members Join Table
+CREATE TABLE team_members (
+    team_id character varying(255) REFERENCES teams(team_id) ON DELETE CASCADE,
+    employee_id bigint REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (team_id, employee_id)
+);
+

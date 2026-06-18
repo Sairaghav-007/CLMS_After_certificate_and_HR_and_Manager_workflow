@@ -5,12 +5,12 @@ import {
   Maximize2, Share2, Loader2
 } from 'lucide-react';
 import {
-  AreaChart, Area, Bar, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer,
-  Line, ComposedChart
+  Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Line, ComposedChart
 } from 'recharts';
-import { PageHeader, FilterBar, KPICard, ExportButton } from '../components/ui';
+import { PageHeader, KPICard, ExportButton } from '../components/ui';
 import { useAuditStore } from '../stores';
+import { useUIStore } from '@/store/UIStore';
 import { exportData } from '../lib/exportUtils';
 import { api } from '@/api/client';
 
@@ -21,17 +21,18 @@ interface TrendPoint {
 }
 
 export default function TrendProgressPage() {
-  const [filterCategory, setFilterCategory] = useState('Individual');
-  const [search, setSearch] = useState('');
   const [timeframe, setTimeframe] = useState('Month');
   const [trendData, setTrendData] = useState<TrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const { addToast } = useUIStore();
   const addLog = useAuditStore(s => s.addLog);
 
   const fetchTrend = async (showSkeleton = true) => {
     if (showSkeleton) setLoading(true);
     try {
-      const res = await api.get('/manager/dashboard/trend');
+      const backendTimeframe = timeframe === 'Week' ? 'Weekly' : timeframe === 'Month' ? 'Monthly' : timeframe === 'Quarter' ? 'Quarterly' : 'Yearly';
+      const res = await api.get(`/manager/dashboard/trend?timeframe=${backendTimeframe}`);
       setTrendData(res.data);
     } catch (err) {
       console.error('Failed to load trend data:', err);
@@ -42,13 +43,15 @@ export default function TrendProgressPage() {
 
   useEffect(() => {
     fetchTrend(true);
+  }, [timeframe]);
 
+  useEffect(() => {
     const interval = setInterval(() => {
       fetchTrend(false);
     }, 15000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [timeframe]);
 
   // Derive KPI stats from real trend data
   const kpiStats = useMemo(() => {
@@ -70,6 +73,15 @@ export default function TrendProgressPage() {
       headers: ['Period', 'Courses Completed', 'In Progress'],
       data: trendData.map(t => [t.period, t.completed, t.inProgress]),
       jsonData: trendData.map(t => ({ Period: t.period, Completed: t.completed, InProgress: t.inProgress }))
+    });
+  };
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    addToast({
+      type: 'success',
+      title: 'Link Copied',
+      message: 'Shareable link to trend analytics copied to clipboard.'
     });
   };
 
@@ -101,29 +113,25 @@ export default function TrendProgressPage() {
             ))}
           </div>
 
-          <FilterBar
-            category={filterCategory}
-            onCategoryChange={setFilterCategory}
-            search={search}
-            onSearchChange={setSearch}
-            extra={
-              <div className="flex items-center gap-2">
-                {['Week', 'Month', 'Quarter', 'Year'].map(t => (
-                  <button
-                    key={t}
-                    onClick={() => setTimeframe(t)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      timeframe === t
-                        ? 'bg-primary-500 text-white'
-                        : 'bg-surface-100 dark:bg-surface-800 text-surface-500'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            }
-          />
+          {/* Timeframe Filter Bar */}
+          <div className="glass-card rounded-card p-4 flex items-center justify-between">
+            <span className="text-xs font-bold text-surface-500 uppercase tracking-wider">Time-Based Filter</span>
+            <div className="flex items-center gap-2">
+              {['Week', 'Month', 'Quarter', 'Year'].map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTimeframe(t)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    timeframe === t
+                      ? 'bg-primary-500 text-white shadow-sm'
+                      : 'bg-surface-100 dark:bg-surface-800 text-surface-500 hover:bg-surface-200 dark:hover:bg-surface-700'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {trendData.length === 0 ? (
             <div className="glass-card rounded-2xl p-12 text-center text-surface-400">
@@ -133,8 +141,8 @@ export default function TrendProgressPage() {
             </div>
           ) : (
             <>
-              {/* Main Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Main Chart */}
+              <div className="w-full">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -143,60 +151,36 @@ export default function TrendProgressPage() {
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h3 className="text-sm font-bold text-surface-900 dark:text-white">Learning Engagement Trend</h3>
-                      <p className="text-[10px] text-surface-500">Completions vs. In-Progress per month</p>
+                      <p className="text-[10px] text-surface-500">Completions vs. In-Progress per period</p>
                     </div>
-                    <Maximize2 className="w-4 h-4 text-surface-400 cursor-pointer" />
+                    <div className="flex items-center gap-3">
+                      <button 
+                        onClick={() => setIsExpanded(true)}
+                        className="p-1 rounded hover:bg-surface-50 text-surface-400 hover:text-surface-600 transition-colors"
+                        title="Expand Chart"
+                      >
+                        <Maximize2 className="w-4 h-4 cursor-pointer" />
+                      </button>
+                      <button 
+                        onClick={handleShare}
+                        className="p-1 rounded hover:bg-surface-50 text-surface-400 hover:text-surface-600 transition-colors"
+                        title="Share Chart"
+                      >
+                        <Share2 className="w-4 h-4 cursor-pointer" />
+                      </button>
+                    </div>
                   </div>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={320}>
                     <ComposedChart data={trendData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:opacity-10" />
                       <XAxis dataKey="period" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                       <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                       <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-                      <Bar yAxisId="left" dataKey="completed" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={20} name="Completed" />
+                      <Bar yAxisId="left" dataKey="completed" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={24} name="Completed" />
                       <Line yAxisId="right" type="monotone" dataKey="inProgress" stroke="#22c55e" strokeWidth={3} dot={{ r: 4, fill: '#22c55e', strokeWidth: 2, stroke: '#fff' }} name="In Progress" />
                     </ComposedChart>
                   </ResponsiveContainer>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="glass-card rounded-2xl p-6"
-                >
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-sm font-bold text-surface-900 dark:text-white">Completion Trajectory</h3>
-                      <p className="text-[10px] text-surface-500">Monthly completion trend over time</p>
-                    </div>
-                    <Share2 className="w-4 h-4 text-surface-400 cursor-pointer" />
-                  </div>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={trendData}>
-                      <defs>
-                        <linearGradient id="completedGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="inProgressGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15} />
-                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:opacity-10" />
-                      <XAxis dataKey="period" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} />
-                      <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} />
-                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-                      <Area type="monotone" dataKey="completed" stroke="#6366f1" strokeWidth={3} fill="url(#completedGrad)" name="Completed" />
-                      <Area type="monotone" dataKey="inProgress" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" fill="url(#inProgressGrad)" name="In Progress" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                  <div className="flex justify-center gap-6 mt-4">
-                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-primary-500" /><span className="text-[10px] text-surface-500">Completed</span></div>
-                    <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-warning-500" /><span className="text-[10px] text-surface-500">In Progress</span></div>
-                  </div>
                 </motion.div>
               </div>
 
@@ -247,6 +231,41 @@ export default function TrendProgressPage() {
             </>
           )}
         </>
+      )}
+
+      {/* Expand Modal */}
+      {isExpanded && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-900/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-surface-900 rounded-3xl border border-surface-200 dark:border-surface-800 shadow-2xl w-full max-w-5xl overflow-hidden p-6 animate-fade-in"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-surface-900 dark:text-white">Learning Engagement Trend (Expanded)</h3>
+                <p className="text-xs text-surface-500">Completions vs. In-Progress per period ({timeframe} view)</p>
+              </div>
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="p-1 rounded-lg hover:bg-surface-50 text-surface-400 hover:text-surface-600 transition-colors font-bold text-lg"
+              >
+                ✕
+              </button>
+            </div>
+            <ResponsiveContainer width="100%" height={450}>
+              <ComposedChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:opacity-10" />
+                <XAxis dataKey="period" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
+                <Bar yAxisId="left" dataKey="completed" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={32} name="Completed" />
+                <Line yAxisId="right" type="monotone" dataKey="inProgress" stroke="#22c55e" strokeWidth={3} dot={{ r: 5, fill: '#22c55e', strokeWidth: 2, stroke: '#fff' }} name="In Progress" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </motion.div>
+        </div>
       )}
     </div>
   );

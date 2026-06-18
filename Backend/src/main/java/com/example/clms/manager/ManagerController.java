@@ -8,6 +8,8 @@ import com.example.clms.user.UserRepository;
 import com.example.clms.course.*;
 import com.example.clms.user.Notification;
 import com.example.clms.user.NotificationRepository;
+import com.example.clms.team.Team;
+import com.example.clms.team.TeamRepository;
 import com.example.clms.notification.FcmService;
 import com.example.clms.notification.NotificationService;
 import com.example.clms.notification.InAppNotification;
@@ -33,6 +35,9 @@ public class ManagerController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private TeamRepository teamRepository;
 
     @Autowired
     private CourseRepository courseRepository;
@@ -113,7 +118,6 @@ public class ManagerController {
         List<Certificate> allCerts = certificateRepository.findAll();
 
         long totalMembers = employees.size();
-        long totalAssigned = 0;
         long completed = 0;
         long inProgress = 0;
         long overdue = 0;
@@ -122,9 +126,8 @@ public class ManagerController {
 
         for (User emp : employees) {
             List<Course> empCourses = getAssignedCoursesForEmployee(emp, activeCourses);
-            totalAssigned += empCourses.size();
-            
-            // Count completed courses using all progress records for this employee (including deleted/archived ones)
+
+            // Count completed courses using all progress records for this employee
             completed += allProgress.stream()
                     .filter(p -> p.getEmployeeId().equals(emp.getId()) && p.isCompleted())
                     .count();
@@ -146,19 +149,33 @@ public class ManagerController {
             }
         }
 
+        // Distinct active published/ready courses (true "Assigned Courses" count derived from actual assigned courses in database)
+        Set<Long> assignedCourseIds = new HashSet<>();
+        for (User emp : employees) {
+            List<Course> empCourses = getAssignedCoursesForEmployee(emp, activeCourses);
+            for (Course c : empCourses) {
+                assignedCourseIds.add(c.getId());
+            }
+        }
+        long distinctAssignedCourses = assignedCourseIds.size();
+
+        long totalAssignedForRate = employees.stream()
+                .mapToLong(emp -> getAssignedCoursesForEmployee(emp, activeCourses).size())
+                .sum();
+
         double avgScore = allProgress.stream()
                 .filter(p -> p.getLastScore() != null && p.getLastScore() > 0)
                 .mapToInt(CourseProgress::getLastScore)
                 .average()
                 .orElse(0.0);
 
-        long completionRate = totalAssigned > 0
-                ? Math.round(((double) completed / totalAssigned) * 100)
+        long completionRate = totalAssignedForRate > 0
+                ? Math.round(((double) completed / totalAssignedForRate) * 100)
                 : 0;
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalTeamMembers", totalMembers);
-        stats.put("assignedCourses", totalAssigned);
+        stats.put("assignedCourses", distinctAssignedCourses);
         stats.put("completedCourses", completed);
         stats.put("inProgressCourses", inProgress);
         stats.put("overdueEmployees", overdue);
@@ -258,36 +275,99 @@ public class ManagerController {
 
     // Trend Progress Records
     @GetMapping("/dashboard/trend")
-    public ResponseEntity<List<Map<String, Object>>> getTrend() {
+    public ResponseEntity<List<Map<String, Object>>> getTrend(
+            @RequestParam(value = "timeframe", defaultValue = "Monthly") String timeframe) {
         List<Map<String, Object>> trend = new ArrayList<>();
         List<CourseProgress> allProgress = courseProgressRepository.findAll();
 
         java.time.LocalDate today = java.time.LocalDate.now();
         DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM");
+        DateTimeFormatter weekFormatter = DateTimeFormatter.ofPattern("dd MMM");
 
-        for (int i = 5; i >= 0; i--) {
-            java.time.LocalDate targetDate = today.minusMonths(i);
-            String monthName = targetDate.format(monthFormatter);
-            int year = targetDate.getYear();
-            int monthValue = targetDate.getMonthValue();
+        if ("Weekly".equalsIgnoreCase(timeframe)) {
+            // Last 7 days, grouped by day
+            for (int i = 6; i >= 0; i--) {
+                java.time.LocalDate day = today.minusDays(i);
+                String label = day.format(weekFormatter);
+                int year = day.getYear(); int month = day.getMonthValue(); int dom = day.getDayOfMonth();
 
-            long compCount = allProgress.stream()
-                    .filter(p -> p.isCompleted() && p.getCompletedAt() != null
-                            && p.getCompletedAt().getYear() == year
-                            && p.getCompletedAt().getMonthValue() == monthValue)
-                    .count();
+                long compCount = allProgress.stream()
+                        .filter(p -> p.isCompleted() && p.getCompletedAt() != null
+                                && p.getCompletedAt().getYear() == year
+                                && p.getCompletedAt().getMonthValue() == month
+                                && p.getCompletedAt().getDayOfMonth() == dom)
+                        .count();
+                long ipCount = allProgress.stream()
+                        .filter(p -> !p.isCompleted() && p.getProgressPercentage() > 0 && p.getLastAccessed() != null
+                                && p.getLastAccessed().getYear() == year
+                                && p.getLastAccessed().getMonthValue() == month
+                                && p.getLastAccessed().getDayOfMonth() == dom)
+                        .count();
+                Map<String, Object> data = new HashMap<>();
+                data.put("period", label); data.put("completed", compCount); data.put("inProgress", ipCount);
+                trend.add(data);
+            }
+        } else if ("Quarterly".equalsIgnoreCase(timeframe)) {
+            // Last 4 quarters
+            for (int i = 3; i >= 0; i--) {
+                java.time.LocalDate quarterStart = today.minusMonths((long) i * 3);
+                int qYear = quarterStart.getYear();
+                int qNum = (quarterStart.getMonthValue() - 1) / 3 + 1;
+                String label = "Q" + qNum + " " + qYear;
+                int startMonth = (qNum - 1) * 3 + 1;
 
-            long ipCount = allProgress.stream()
-                    .filter(p -> !p.isCompleted() && p.getProgressPercentage() > 0 && p.getLastAccessed() != null
-                            && p.getLastAccessed().getYear() == year
-                            && p.getLastAccessed().getMonthValue() == monthValue)
-                    .count();
+                final int sy = qYear; final int sm = startMonth;
+                long compCount = allProgress.stream()
+                        .filter(p -> p.isCompleted() && p.getCompletedAt() != null
+                                && p.getCompletedAt().getYear() == sy
+                                && p.getCompletedAt().getMonthValue() >= sm
+                                && p.getCompletedAt().getMonthValue() <= sm + 2)
+                        .count();
+                long ipCount = allProgress.stream()
+                        .filter(p -> !p.isCompleted() && p.getProgressPercentage() > 0 && p.getLastAccessed() != null
+                                && p.getLastAccessed().getYear() == sy
+                                && p.getLastAccessed().getMonthValue() >= sm
+                                && p.getLastAccessed().getMonthValue() <= sm + 2)
+                        .count();
+                Map<String, Object> data = new HashMap<>();
+                data.put("period", label); data.put("completed", compCount); data.put("inProgress", ipCount);
+                trend.add(data);
+            }
+        } else if ("Yearly".equalsIgnoreCase(timeframe)) {
+            // Last 3 years
+            for (int i = 2; i >= 0; i--) {
+                int year = today.getYear() - i;
+                long compCount = allProgress.stream()
+                        .filter(p -> p.isCompleted() && p.getCompletedAt() != null && p.getCompletedAt().getYear() == year)
+                        .count();
+                long ipCount = allProgress.stream()
+                        .filter(p -> !p.isCompleted() && p.getProgressPercentage() > 0 && p.getLastAccessed() != null && p.getLastAccessed().getYear() == year)
+                        .count();
+                Map<String, Object> data = new HashMap<>();
+                data.put("period", String.valueOf(year)); data.put("completed", compCount); data.put("inProgress", ipCount);
+                trend.add(data);
+            }
+        } else {
+            // Monthly (default) — last 6 months
+            for (int i = 5; i >= 0; i--) {
+                java.time.LocalDate targetDate = today.minusMonths(i);
+                String monthName = targetDate.format(monthFormatter);
+                int year = targetDate.getYear(); int monthValue = targetDate.getMonthValue();
 
-            Map<String, Object> data = new HashMap<>();
-            data.put("period", monthName);
-            data.put("completed", compCount);
-            data.put("inProgress", ipCount);
-            trend.add(data);
+                long compCount = allProgress.stream()
+                        .filter(p -> p.isCompleted() && p.getCompletedAt() != null
+                                && p.getCompletedAt().getYear() == year
+                                && p.getCompletedAt().getMonthValue() == monthValue)
+                        .count();
+                long ipCount = allProgress.stream()
+                        .filter(p -> !p.isCompleted() && p.getProgressPercentage() > 0 && p.getLastAccessed() != null
+                                && p.getLastAccessed().getYear() == year
+                                && p.getLastAccessed().getMonthValue() == monthValue)
+                        .count();
+                Map<String, Object> data = new HashMap<>();
+                data.put("period", monthName); data.put("completed", compCount); data.put("inProgress", ipCount);
+                trend.add(data);
+            }
         }
 
         return ResponseEntity.ok(trend);
@@ -859,13 +939,54 @@ public class ManagerController {
     }
 
     @GetMapping("/employees")
-    public ResponseEntity<List<Map<String, Object>>> getEmployeesList() {
+    public ResponseEntity<List<Map<String, Object>>> getEmployeesList(
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "value", required = false) String value) {
         List<User> employees = userRepository.findAll().stream()
                 .filter(u -> u.getRole() == Role.EMPLOYEE)
                 .collect(Collectors.toList());
 
+        if ("Team".equalsIgnoreCase(category) && value != null && !value.trim().isEmpty()) {
+            List<Team> matchedTeams = teamRepository.findAll().stream()
+                    .filter(t -> t.getTeamId().equalsIgnoreCase(value) || t.getName().equalsIgnoreCase(value))
+                    .toList();
+            Set<Long> teamEmpIds = matchedTeams.stream()
+                    .flatMap(t -> t.getEmployees().stream())
+                    .map(User::getId)
+                    .collect(Collectors.toSet());
+            employees = employees.stream()
+                    .filter(e -> teamEmpIds.contains(e.getId()))
+                    .collect(Collectors.toList());
+        } else if ("Group".equalsIgnoreCase(category) && value != null && !value.trim().isEmpty()) {
+            Optional<Group> groupOpt = groupRepository.findById(value);
+            if (groupOpt.isPresent()) {
+                List<String> groupEmpIds = groupOpt.get().getEmployees();
+                Set<Long> cleanGroupEmpIds = groupEmpIds.stream()
+                        .map(idStr -> {
+                            try {
+                                return Long.parseLong(idStr.replace("EMP-", "").trim());
+                            } catch (Exception e) {
+                                return -1L;
+                            }
+                        })
+                        .collect(Collectors.toSet());
+                employees = employees.stream()
+                        .filter(e -> cleanGroupEmpIds.contains(e.getId()))
+                        .collect(Collectors.toList());
+            } else {
+                employees = Collections.emptyList();
+            }
+        } else if ("Department".equalsIgnoreCase(category) && value != null && !value.trim().isEmpty()) {
+            employees = employees.stream()
+                    .filter(e -> e.getDepartment() != null && e.getDepartment().equalsIgnoreCase(value))
+                    .collect(Collectors.toList());
+        }
+
         List<Map<String, Object>> list = new ArrayList<>();
         List<Course> activeCourses = courseRepository.findByActiveTrue();
+
+        List<Team> allTeams = teamRepository.findAll();
+        List<Group> allGroups = groupRepository.findAll();
 
         for (User emp : employees) {
             Map<String, Object> map = new HashMap<>();
@@ -874,6 +995,21 @@ public class ManagerController {
             map.put("email", emp.getEmail());
             map.put("department", emp.getDepartment() != null ? emp.getDepartment() : "Engineering");
             map.put("designation", emp.getDesignation() != null ? emp.getDesignation() : "Software Developer");
+
+            String teamName = allTeams.stream()
+                    .filter(t -> t.getEmployees().stream().anyMatch(e -> e.getId().equals(emp.getId())))
+                    .map(Team::getName)
+                    .findFirst()
+                    .orElse("");
+
+            String groupName = allGroups.stream()
+                    .filter(g -> g.getEmployees() != null && g.getEmployees().contains("EMP-" + emp.getId()))
+                    .map(Group::getName)
+                    .findFirst()
+                    .orElse("");
+
+            map.put("team", teamName);
+            map.put("group", groupName);
             map.put("joiningDate", "2026-03-01");
             map.put("linkedinUrl", emp.getLinkedinUrl());
             map.put("avatar", emp.getFullName() != null && !emp.getFullName().isEmpty() ? emp.getFullName().substring(0, 1) : "E");

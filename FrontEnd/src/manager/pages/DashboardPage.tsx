@@ -205,12 +205,18 @@ export default function DashboardPage() {
                 paddingAngle={8}
                 dataKey="value"
                 stroke="none"
+                label={({ percent }) => percent ? `${(percent * 100).toFixed(0)}%` : ''}
               >
                 {pieData.map((entry, index) => (
                   <Cell key={index} fill={entry.color} />
                 ))}
               </Pie>
               <Tooltip
+                formatter={(value: any) => {
+                  const total = pieData.reduce((s, d) => s + d.value, 0);
+                  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                  return [`${pct}%`, 'Percentage'];
+                }}
                 contentStyle={{
                   background: 'rgba(255,255,255,0.95)',
                   border: 'none',
@@ -222,17 +228,21 @@ export default function DashboardPage() {
             </PieChart>
           </ResponsiveContainer>
           <div className="flex flex-col gap-3 mt-6">
-            {pieData.map((item) => (
-              <div key={item.name} className="flex items-center justify-between p-3 rounded-xl bg-surface-50">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full" style={{ background: item.color }} />
-                  <span className="text-xs font-bold text-surface-700">
-                    {item.name}
-                  </span>
+            {pieData.map((item) => {
+              const total = pieData.reduce((s, d) => s + d.value, 0);
+              const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
+              return (
+                <div key={item.name} className="flex items-center justify-between p-3 rounded-xl bg-surface-50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full" style={{ background: item.color }} />
+                    <span className="text-xs font-bold text-surface-700">
+                      {item.name}
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-surface-900">{pct}%</span>
                 </div>
-                <span className="text-xs font-bold text-surface-900">{item.value}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </motion.div>
       </div>

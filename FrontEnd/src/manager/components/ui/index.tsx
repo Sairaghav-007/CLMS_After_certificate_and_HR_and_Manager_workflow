@@ -103,21 +103,23 @@ export function FilterBar({
       animate={{ opacity: 1, y: 0 }}
       className="glass-card rounded-card p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3"
     >
-      <div className="flex items-center gap-1 p-1 bg-surface-100 dark:bg-surface-800 rounded-btn">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => onCategoryChange(cat)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border ${
-              category === cat
-                ? 'bg-white border-primary-500 text-black shadow-sm'
-                : 'bg-white border-surface-200 text-black/60 hover:text-black'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
+      {categories && categories.length > 0 && (
+        <div className="flex items-center gap-1 p-1 bg-surface-100 dark:bg-surface-800 rounded-btn">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => onCategoryChange(cat)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border ${
+                category === cat
+                  ? 'bg-white border-primary-500 text-black shadow-sm'
+                  : 'bg-white border-surface-200 text-black/60 hover:text-black'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex-1 relative">
         <input
           type="text"

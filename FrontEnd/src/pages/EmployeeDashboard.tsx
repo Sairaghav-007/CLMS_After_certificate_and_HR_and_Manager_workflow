@@ -98,7 +98,7 @@ export function EmployeeDashboard() {
             duration,
             totalModules: existing?.modules?.length || 2,
             totalAssessments: 1,
-            progress: bc.progressPercent !== undefined ? bc.progressPercent : (existing?.progress || 0),
+            progress: bc.progress !== undefined ? bc.progress : (bc.progressPercent !== undefined ? bc.progressPercent : (existing?.progress || 0)),
             status: bc.status?.toLowerCase() === "completed" ? CompletionStatus.COMPLETED : 
                     bc.status?.toLowerCase() === "in_progress" ? CompletionStatus.IN_PROGRESS : 
                     (existing?.status || CompletionStatus.NOT_STARTED),
