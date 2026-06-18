@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { StatsGrid } from '@/hr/components/StatsGrid';
 import { RecentActivities } from '@/hr/components/RecentActivities';
-import { PendingActions } from '@/hr/components/PendingActions';
 import { useThemeStore } from '@/hr/store';
 import { cn } from '@/hr/lib/utils';
 import { api } from '@/api/client';
-import type { KPICard, RecentActivity, PendingAction } from '@/hr/types';
+import type { KPICard, RecentActivity } from '@/hr/types';
 
 export default function Dashboard() {
   const { theme } = useThemeStore();
@@ -14,7 +13,6 @@ export default function Dashboard() {
 
   const [kpiCards, setKpiCards] = useState<KPICard[]>([]);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDashboard = async () => {
@@ -98,17 +96,7 @@ export default function Dashboard() {
         }))
       );
 
-      setPendingActions(
-        (d.pendingActions ?? []).map((pa: any) => ({
-          id: pa.id,
-          title: pa.title,
-          description: pa.description,
-          count: pa.count,
-          priority: pa.priority,
-          actionLabel: pa.actionLabel,
-          actionType: pa.actionType,
-        }))
-      );
+
     } catch (err) {
       console.error('[HR Dashboard] Failed to load live data:', err);
     } finally {
@@ -170,9 +158,8 @@ export default function Dashboard() {
       )}
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-1 gap-8">
         <RecentActivities activities={recentActivities} />
-        <PendingActions actions={pendingActions} />
       </div>
 
       {/* Bottom Spacer for mobile */}
