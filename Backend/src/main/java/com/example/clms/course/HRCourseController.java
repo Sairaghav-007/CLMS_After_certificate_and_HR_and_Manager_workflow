@@ -12,6 +12,8 @@ import com.example.clms.manager.AuditLogRepository;
 import com.example.clms.manager.ChangeRequest;
 import com.example.clms.manager.ChangeRequestRepository;
 import com.example.clms.manager.SseService;
+import com.example.clms.scorm.ScormPackage;
+import com.example.clms.scorm.ScormPackageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +49,7 @@ public class HRCourseController {
     private final CourseContentRepository courseContentRepository;
     private final QuestionRepository questionRepository;
     private final SseService sseService;
+    private final ScormPackageRepository scormPackageRepository;
 
     private User getAuthenticatedUser() {
         String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
@@ -197,7 +200,11 @@ public class HRCourseController {
                     .title(req.title)
                     .category(req.category)
                     .description(req.description)
-                    .dueDate(LocalDate.now().plusDays(30))
+                    .dueDate(req.endDate != null ? req.endDate : LocalDate.now().plusDays(30))
+                    .startDate(req.startDate)
+                    .endDate(req.endDate)
+                    .objectives(req.objectives != null ? req.objectives : new ArrayList<>())
+                    .learningOutcomes(req.learningOutcomes != null ? req.learningOutcomes : new ArrayList<>())
                     .active(isPublished)
                     .status(req.status != null ? req.status : "DRAFT")
                     .createdBy(hrUser.getFullName())
@@ -219,6 +226,19 @@ public class HRCourseController {
             course.setMaxAttempts(req.maxAttempts > 0 ? req.maxAttempts : course.getMaxAttempts());
             course.setDuration(req.duration > 0 ? req.duration : course.getDuration());
             course.setDepartment(req.department != null ? req.department : course.getDepartment());
+            course.setStartDate(req.startDate);
+            course.setEndDate(req.endDate);
+            if (req.endDate != null) {
+                course.setDueDate(req.endDate);
+            }
+            if (req.objectives != null) {
+                course.getObjectives().clear();
+                course.getObjectives().addAll(req.objectives);
+            }
+            if (req.learningOutcomes != null) {
+                course.getLearningOutcomes().clear();
+                course.getLearningOutcomes().addAll(req.learningOutcomes);
+            }
             if (req.thumbnail != null && !req.thumbnail.isBlank()) {
                 course.setThumbnail(req.thumbnail);
             }
@@ -262,8 +282,11 @@ public class HRCourseController {
                         } else if ("PPT".equalsIgnoreCase(sessReq.type) || "PPTX".equalsIgnoreCase(sessReq.type)) {
                             matType = MaterialType.PPT;
                             matUrl = sessReq.pptUrl;
+                        } else if ("SCORM".equalsIgnoreCase(sessReq.type)) {
+                            matType = MaterialType.SCORM;
+                            matUrl = sessReq.scormUrl;
                         } else {
-                            matUrl = sessReq.videoUrl != null ? sessReq.videoUrl : (sessReq.pdfUrl != null ? sessReq.pdfUrl : sessReq.pptUrl);
+                            matUrl = sessReq.videoUrl != null ? sessReq.videoUrl : (sessReq.pdfUrl != null ? sessReq.pdfUrl : (sessReq.pptUrl != null ? sessReq.pptUrl : sessReq.scormUrl));
                         }
 
                         if (matUrl == null) matUrl = "";
@@ -273,6 +296,7 @@ public class HRCourseController {
                                 .title(sessReq.title)
                                 .materialType(matType)
                                 .materialUrl(matUrl)
+                                .scormPackageId(sessReq.scormPackageId)
                                 .sectionOrder(sIdx + 1)
                                 .duration(sessReq.duration > 0 ? sessReq.duration : 0)
                                 .build();
@@ -307,6 +331,20 @@ public class HRCourseController {
         savedCourse.getModules().addAll(modules);
         savedCourse = courseRepository.save(savedCourse);
 
+        // Update ScormPackage with the saved courseId and sectionId
+        for (CourseModule m : savedCourse.getModules()) {
+            for (CourseSection s : m.getSections()) {
+                if (s.getMaterialType() == MaterialType.SCORM && s.getScormPackageId() != null) {
+                    final Long secId = s.getId();
+                    final Long courseIdRef = savedCourse.getId();
+                    scormPackageRepository.findById(s.getScormPackageId()).ifPresent(pkg -> {
+                        pkg.setCourseId(courseIdRef);
+                        pkg.setSectionId(secId);
+                        scormPackageRepository.save(pkg);
+                    });
+                }
+            }
+        }
 
         // Audit Log Entry
         AuditLog audit = AuditLog.builder()
@@ -393,6 +431,10 @@ public class HRCourseController {
                     map.put("duration", c.getDuration());
                     map.put("department", c.getDepartment() != null ? c.getDepartment() : "Engineering");
                     map.put("thumbnail", c.getThumbnail() != null ? c.getThumbnail() : "");
+                    map.put("startDate", c.getStartDate() != null ? c.getStartDate().toString() : null);
+                    map.put("endDate", c.getEndDate() != null ? c.getEndDate().toString() : null);
+                    map.put("objectives", c.getObjectives() != null ? c.getObjectives() : new ArrayList<>());
+                    map.put("learningOutcomes", c.getLearningOutcomes() != null ? c.getLearningOutcomes() : new ArrayList<>());
                     
                     // Map change requests
                     List<ChangeRequest> changeReqs = changeRequestRepository.findByCourseId(c.getId());
@@ -444,6 +486,7 @@ public class HRCourseController {
                                     String typeStr = "Video";
                                     if (sec.getMaterialType() == MaterialType.PDF) typeStr = "PDF";
                                     else if (sec.getMaterialType() == MaterialType.PPT) typeStr = "PPT";
+                                    else if (sec.getMaterialType() == MaterialType.SCORM) typeStr = "SCORM";
                                     
                                     secMap.put("type", typeStr);
                                     secMap.put("duration", sec.getDuration() != null ? sec.getDuration() : 0);
@@ -453,6 +496,8 @@ public class HRCourseController {
                                     secMap.put("videoUrl", sec.getMaterialType() == MaterialType.VIDEO ? url : null);
                                     secMap.put("pdfUrl",   sec.getMaterialType() == MaterialType.PDF   ? url : null);
                                     secMap.put("pptUrl",   sec.getMaterialType() == MaterialType.PPT   ? url : null);
+                                    secMap.put("scormUrl", sec.getMaterialType() == MaterialType.SCORM ? url : null);
+                                    secMap.put("scormPackageId", sec.getMaterialType() == MaterialType.SCORM ? sec.getScormPackageId() : null);
                                     sessionList.add(secMap);
                                 }
                             }
@@ -665,6 +710,10 @@ public class HRCourseController {
         public String department;
         public String status;
         public String thumbnail;
+        public java.time.LocalDate startDate;
+        public java.time.LocalDate endDate;
+        public List<String> objectives;
+        public List<String> learningOutcomes;
         public List<ModuleSaveRequest> modules;
     }
 
@@ -682,6 +731,8 @@ public class HRCourseController {
         public String videoUrl;
         public String pdfUrl;
         public String pptUrl;
+        public String scormUrl;
+        public Long scormPackageId;
         public int duration;
     }
 }

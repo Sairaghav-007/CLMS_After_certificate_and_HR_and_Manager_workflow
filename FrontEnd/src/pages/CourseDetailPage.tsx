@@ -16,7 +16,7 @@ import {
 interface Section {
   id: number;
   title: string;
-  materialType: "VIDEO" | "PDF" | "PPT" | "DOCUMENT";
+  materialType: "VIDEO" | "PDF" | "PPT" | "DOCUMENT" | "SCORM";
   materialUrl: string;
   sectionOrder: number;
 }

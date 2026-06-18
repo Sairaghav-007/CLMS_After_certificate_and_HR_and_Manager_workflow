@@ -1,0 +1,98 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <title>SCORM 1.2 Test SCO</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-align: center;
+      padding: 3rem;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    button {
+      background: white;
+      color: #764ba2;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: all 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+    #status {
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+  </style>
+  <script>
+    function getAPI() {
+      var theAPI = findAPI(window);
+      if ((theAPI == null) && (window.opener != null) && (typeof(window.opener) != "undefined")) {
+        theAPI = findAPI(window.opener);
+      }
+      if (theAPI == null) {
+        console.log("Unable to find the SCORM API adapter.");
+      }
+      return theAPI;
+    }
+    
+    function findAPI(win) {
+      var findAttempts = 0;
+      while ((win.API == null) && (win.parent != null) && (win.parent != win)) {
+        findAttempts++;
+        if (findAttempts > 500) {
+          return null;
+        }
+        win = win.parent;
+      }
+      return win.API;
+    }
+
+    var api = null;
+    
+    function initSco() {
+      api = getAPI();
+      if (api) {
+        api.LMSInitialize("");
+        var status = api.LMSGetValue("cmi.core.lesson_status");
+        document.getElementById("status").innerText = "Status: " + status;
+      } else {
+        document.getElementById("status").innerText = "Status: No SCORM API found (running standalone)";
+      }
+    }
+    
+    function completeSco() {
+      if (api) {
+        api.LMSSetValue("cmi.core.lesson_status", "completed");
+        api.LMSCommit("");
+        var status = api.LMSGetValue("cmi.core.lesson_status");
+        document.getElementById("status").innerText = "Status: " + status;
+        alert("SCORM Lesson Completed!");
+      } else {
+        alert("Running standalone - simulated completion!");
+      }
+    }
+  </script>
+</head>
+<body onload="initSco()">
+  <h1>CLMS SCORM Test Sco</h1>
+  <p>This is a test SCORM package running in the course section.</p>
+  <p>Click the button below to complete the SCO and trigger progress synchronization.</p>
+  <br/>
+  <button onclick="completeSco()">Mark Section Complete</button>
+  <p id="status">Status: loading...</p>
+</body>
+</html>

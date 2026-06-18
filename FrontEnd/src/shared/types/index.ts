@@ -17,6 +17,7 @@ export enum ModuleResourceType {
   PPT = 'ppt',
   READING = 'reading',
   INTERACTIVE = 'interactive',
+  SCORM = 'scorm',
 }
 
 export enum QuestionType {
@@ -72,6 +73,9 @@ export interface ModuleResource {
   watchedDuration?: number;
   totalDuration?: number;
   lastPosition?: number;
+  scormPackageUuid?: string;
+  scormEntryPath?: string;
+  scormVersion?: '1.2' | '2004';
 }
 
 export interface Module {
@@ -156,6 +160,9 @@ export interface Course {
   certificate?: Certificate;
   popularity: number;
   department: string;
+  startDate?: string;
+  endDate?: string;
+  createdBy?: string;
 }
 
 export interface Certificate {

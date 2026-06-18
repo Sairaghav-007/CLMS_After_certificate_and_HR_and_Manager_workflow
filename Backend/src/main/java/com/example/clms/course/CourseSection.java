@@ -32,4 +32,12 @@ public class CourseSection {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "module_id", nullable = false)
     private CourseModule module;
+
+    /**
+     * For SCORM sections only: references scorm_packages.id
+     * Null for VIDEO/PDF/PPT/DOCUMENT sections.
+     */
+    @Column(name = "scorm_package_id")
+    private Long scormPackageId;
 }
+

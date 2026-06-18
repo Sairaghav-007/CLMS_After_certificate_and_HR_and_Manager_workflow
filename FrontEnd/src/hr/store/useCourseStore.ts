@@ -27,6 +27,10 @@ function freshCourse(): Partial<Course> {
     auditLogs: [],
     createdAt: ts(),
     updatedAt: ts(),
+    startDate: '',
+    endDate: '',
+    objectives: [],
+    learningOutcomes: [],
   };
 }
 
@@ -413,6 +417,10 @@ export const useCourseStore = create<CourseState>()(
                   pptUrl: s.pptUrl,
                 })),
               })),
+              startDate: c.startDate || '',
+              endDate: c.endDate || '',
+              objectives: c.objectives || [],
+              learningOutcomes: c.learningOutcomes || [],
               changeRequests: c.changeRequests || [],
               auditLogs: c.auditLogs || [],
               createdAt: c.createdAt || ts(),

@@ -8,7 +8,7 @@ export type CourseStatus =
 
 export type CourseCategory = 'Mandatory' | 'Elective' | 'Department-Oriented';
 
-export type SessionType = 'Video' | 'PDF' | 'PPT';
+export type SessionType = 'Video' | 'PDF' | 'PPT' | 'SCORM';
 
 export type ChangePriority = 'Low' | 'Medium' | 'High';
 
@@ -33,6 +33,8 @@ export interface Session {
   pptUrl?: string;
   slideCount?: number;
   pptDescription?: string;
+  scormUrl?: string;
+  scormPackageId?: number;
 }
 
 export interface Module {
@@ -119,5 +121,9 @@ export interface Course {
   changeRequests: ChangeRequest[];
   auditLogs: AuditLogEntry[];
   questions?: Question[];
+  startDate?: string;
+  endDate?: string;
+  objectives?: string[];
+  learningOutcomes?: string[];
 }
 

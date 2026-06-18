@@ -2,6 +2,8 @@ package com.example.clms.admin;
 
 import com.example.clms.course.Course;
 import com.example.clms.course.CourseRepository;
+import com.example.clms.scorm.ScormPackage;
+import com.example.clms.scorm.ScormPackageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +29,12 @@ public class AdminCourseController {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private ScormPackageRepository scormPackageRepository;
+
+    @Autowired
+    private com.example.clms.scorm.ScormController scormController;
 
     public static class CourseDto {
         public String id;
@@ -102,6 +110,29 @@ public class AdminCourseController {
             entityManager.createQuery("DELETE FROM AuditLog al WHERE al.courseId = :id").setParameter("id", id).executeUpdate();
             entityManager.createQuery("DELETE FROM Question q WHERE q.courseId = :id").setParameter("id", id).executeUpdate();
             entityManager.createQuery("DELETE FROM CourseContent cc WHERE cc.courseId = :id").setParameter("id", id).executeUpdate();
+            
+            // Delete SCORM packages for this course from S3 and DB
+            try {
+                List<ScormPackage> scormPackages = scormPackageRepository.findByCourseId(id);
+                for (ScormPackage pkg : scormPackages) {
+                    try {
+                        scormController.deletePackageFromS3(pkg.getPackageUuid());
+                    } catch (Exception e) {
+                        System.err.println("[SCORM S3] Failed to delete S3 package folder: " + e.getMessage());
+                    }
+                }
+                scormPackageRepository.deleteAll(scormPackages);
+            } catch (Exception e) {
+                System.err.println("[SCORM] Error cleaning up packages: " + e.getMessage());
+            }
+
+            // Delete SCORM runtime data for this course
+            try {
+                entityManager.createQuery("DELETE FROM ScormRuntimeData srd WHERE srd.courseId = :id")
+                    .setParameter("id", id).executeUpdate();
+            } catch (Exception e) {
+                System.err.println("[SCORM] Error cleaning up ScormRuntimeData: " + e.getMessage());
+            }
             
             courseRepository.deleteById(id);
 

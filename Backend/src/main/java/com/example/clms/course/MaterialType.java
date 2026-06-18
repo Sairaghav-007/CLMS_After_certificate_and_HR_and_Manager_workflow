@@ -4,5 +4,6 @@ public enum MaterialType {
     VIDEO,
     PDF,
     PPT,
-    DOCUMENT
+    DOCUMENT,
+    SCORM
 }
