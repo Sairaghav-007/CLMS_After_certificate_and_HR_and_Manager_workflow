@@ -7,7 +7,6 @@ import {
   Award,
   LogOut,
   Bell,
-  Search,
   Menu,
   X,
   ChevronDown,
@@ -42,7 +41,6 @@ export function AppLayout() {
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
 
   const updateUser = useAuthStore((state) => state.updateUser);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -203,7 +201,7 @@ export function AppLayout() {
   const countUnread = unreadCount();
 
   return (
-    <div className="min-h-screen bg-surface-50 flex overflow-hidden font-sans">
+    <div className="h-screen bg-surface-50 flex overflow-hidden font-sans">
       {/* Toast Notifications container */}
       <ToastContainer />
 
@@ -351,7 +349,7 @@ export function AppLayout() {
       </AnimatePresence>
 
       {/* Main Content Wrapper */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header Bar */}
         <header className="h-16 bg-white border-b border-surface-200/80 flex items-center justify-between px-4 sm:px-8 relative z-30 select-none">
           {/* Left: Mobile Toggle & Welcome text */}
@@ -370,26 +368,13 @@ export function AppLayout() {
             </button>
             <div className="hidden sm:block text-left">
               <h2 className="text-xs font-bold text-surface-800 leading-tight">Welcome, {user?.fullName || 'User'}</h2>
-              <p className="text-[10px] text-surface-450 font-semibold uppercase tracking-wider mt-0.5">Role: {user?.role || 'Employee'}</p>
+              <p className="text-[10px] text-surface-450 font-semibold uppercase tracking-wider mt-0.5">Dashboard</p>
             </div>
           </div>
 
-          {/* Right: Search, Notifications, Profile Dropdown */}
+          {/* Right: Notifications, Profile Dropdown */}
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Mock Search Input */}
-            <div className={cn(
-              "hidden md:flex items-center gap-2 px-3 py-1.5 bg-surface-50 border border-surface-200 rounded-xl transition-all w-60",
-              searchFocused && "border-primary-400 bg-white ring-2 ring-primary-100/50 w-72"
-            )}>
-              <Search size={15} className="text-surface-400" />
-              <input
-                type="text"
-                placeholder="Search resources, topics..."
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
-                className="bg-transparent text-xs text-surface-800 border-none outline-none w-full font-medium placeholder-surface-400"
-              />
-            </div>
+
 
             {/* Notifications Widget */}
             <div className="relative" ref={notifRef}>
