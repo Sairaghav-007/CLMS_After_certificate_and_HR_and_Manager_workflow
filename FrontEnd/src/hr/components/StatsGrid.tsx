@@ -33,65 +33,65 @@ const colorClasses: Record<string, {
   highlightBg: string;
   highlightBgDark: string;
 }> = {
-  indigo: {
+  primary: {
     iconBg: 'bg-primary-50',
-    iconBgDark: 'bg-primary-500/10',
-    iconColor: 'text-primary-600',
-    accentBorder: 'border-l-primary-500',
-    accentBorderDark: 'border-l-primary-400',
-    trendColor: 'text-primary-600',
+    iconBgDark: 'bg-primary-900/20',
+    iconColor: 'text-primary-700',
+    accentBorder: 'border-l-primary-700',
+    accentBorderDark: 'border-l-primary-500',
+    trendColor: 'text-primary-700',
     highlightBg: 'bg-primary-50',
-    highlightBgDark: 'bg-primary-500/10',
+    highlightBgDark: 'bg-primary-900/20',
   },
-  amber: {
-    iconBg: 'bg-amber-50',
-    iconBgDark: 'bg-amber-500/10',
-    iconColor: 'text-amber-600',
-    accentBorder: 'border-l-amber-500',
-    accentBorderDark: 'border-l-amber-400',
-    trendColor: 'text-amber-600',
-    highlightBg: 'bg-amber-50',
-    highlightBgDark: 'bg-amber-500/10',
-  },
-  blue: {
-    iconBg: 'bg-blue-50',
-    iconBgDark: 'bg-blue-500/10',
-    iconColor: 'text-blue-600',
-    accentBorder: 'border-l-blue-500',
-    accentBorderDark: 'border-l-blue-400',
-    trendColor: 'text-blue-600',
-    highlightBg: 'bg-blue-50',
-    highlightBgDark: 'bg-blue-500/10',
-  },
-  emerald: {
+  accent: {
     iconBg: 'bg-accent-50',
-    iconBgDark: 'bg-accent-500/10',
-    iconColor: 'text-accent-600',
-    accentBorder: 'border-l-accent-500',
-    accentBorderDark: 'border-l-accent-400',
-    trendColor: 'text-accent-600',
+    iconBgDark: 'bg-accent-900/20',
+    iconColor: 'text-accent-700',
+    accentBorder: 'border-l-accent-700',
+    accentBorderDark: 'border-l-accent-500',
+    trendColor: 'text-accent-700',
     highlightBg: 'bg-accent-50',
-    highlightBgDark: 'bg-accent-500/10',
+    highlightBgDark: 'bg-accent-900/20',
   },
-  orange: {
-    iconBg: 'bg-orange-50',
-    iconBgDark: 'bg-orange-500/10',
-    iconColor: 'text-orange-600',
-    accentBorder: 'border-l-orange-500',
-    accentBorderDark: 'border-l-orange-400',
-    trendColor: 'text-orange-600',
-    highlightBg: 'bg-orange-50',
-    highlightBgDark: 'bg-orange-500/10',
+  warning: {
+    iconBg: 'bg-warning-50',
+    iconBgDark: 'bg-warning-900/20',
+    iconColor: 'text-warning-700',
+    accentBorder: 'border-l-warning-700',
+    accentBorderDark: 'border-l-warning-500',
+    trendColor: 'text-warning-700',
+    highlightBg: 'bg-warning-50',
+    highlightBgDark: 'bg-warning-900/20',
   },
-  violet: {
-    iconBg: 'bg-secondary-50',
-    iconBgDark: 'bg-secondary-500/10',
-    iconColor: 'text-secondary-600',
-    accentBorder: 'border-l-secondary-500',
-    accentBorderDark: 'border-l-secondary-400',
-    trendColor: 'text-secondary-600',
-    highlightBg: 'bg-secondary-50',
-    highlightBgDark: 'bg-secondary-500/10',
+  info: {
+    iconBg: 'bg-info-50',
+    iconBgDark: 'bg-info-900/20',
+    iconColor: 'text-info-700',
+    accentBorder: 'border-l-info-700',
+    accentBorderDark: 'border-l-info-500',
+    trendColor: 'text-info-700',
+    highlightBg: 'bg-info-50',
+    highlightBgDark: 'bg-info-900/20',
+  },
+  danger: {
+    iconBg: 'bg-danger-50',
+    iconBgDark: 'bg-danger-900/20',
+    iconColor: 'text-danger-700',
+    accentBorder: 'border-l-danger-700',
+    accentBorderDark: 'border-l-danger-500',
+    trendColor: 'text-danger-700',
+    highlightBg: 'bg-danger-50',
+    highlightBgDark: 'bg-danger-900/20',
+  },
+  secondary: {
+    iconBg: 'bg-surface-50',
+    iconBgDark: 'bg-surface-800/50',
+    iconColor: 'text-surface-600',
+    accentBorder: 'border-l-surface-400',
+    accentBorderDark: 'border-l-surface-600',
+    trendColor: 'text-surface-600',
+    highlightBg: 'bg-surface-50',
+    highlightBgDark: 'bg-surface-800/50',
   },
 };
 
@@ -234,7 +234,7 @@ interface StatsGridProps {
 
 export function StatsGrid({ cards }: StatsGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {cards.map((card, index) => (
         <StatCard key={card.id} card={card} index={index} />
       ))}

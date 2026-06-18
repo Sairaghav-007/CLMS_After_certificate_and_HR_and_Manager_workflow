@@ -180,7 +180,7 @@ export function CertificatesPage() {
               className="bg-white border border-surface-200 rounded-3xl overflow-hidden hover:shadow-lg transition-all flex flex-col justify-between"
             >
               <div className="p-6 text-left">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center border border-primary-100 mb-4">
                   <Award size={20} />
                 </div>
                 
@@ -258,19 +258,19 @@ export function CertificatesPage() {
               {/* Certificate Preview */}
               <div className="p-6 overflow-x-auto overflow-y-hidden bg-surface-950 flex justify-center items-center">
                 <div 
-                  className="w-[841px] h-[595px] flex-shrink-0 bg-white text-surface-900 p-12 border-[16px] border-double border-amber-600 relative select-none flex flex-col justify-between shadow-lg text-center"
+                  className="w-[841px] h-[595px] flex-shrink-0 bg-white text-surface-900 p-12 border-[16px] border-double border-primary-800 relative select-none flex flex-col justify-between shadow-lg text-center"
                   style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
                 >
-                  <div className="absolute top-4 left-4 right-4 bottom-4 border border-amber-600/30 pointer-events-none" />
+                  <div className="absolute top-4 left-4 right-4 bottom-4 border border-primary-800/10 pointer-events-none" />
 
                   <div className="flex flex-col items-center">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white mb-4 border border-amber-500">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-700 to-accent-600 flex items-center justify-center text-white mb-4 border border-primary-600/20">
                       <Award size={36} />
                     </div>
-                    <h2 className="text-3xl font-bold tracking-wide text-amber-800 uppercase" style={{ letterSpacing: '4px' }}>
+                    <h2 className="text-3xl font-bold tracking-wide text-primary-900 uppercase" style={{ letterSpacing: '4px' }}>
                       Certificate of Completion
                     </h2>
-                    <div className="w-40 h-[1.5px] bg-amber-500/50 my-3" />
+                    <div className="w-40 h-[1.5px] bg-accent-500/30 my-3" />
                     <p className="text-[11px] uppercase tracking-widest text-surface-500 font-black" style={{ letterSpacing: '2px' }}>
                       This credential certifies that
                     </p>
@@ -283,7 +283,7 @@ export function CertificatesPage() {
                     <p className="text-xs text-surface-500 mt-3 max-w-md mx-auto leading-relaxed" style={{ fontWeight: '500' }}>
                       has successfully completed the corporate competency training requirements for:
                     </p>
-                    <h3 className="text-lg font-bold text-amber-800 mt-2 max-w-lg mx-auto leading-tight" style={{ fontWeight: '800' }}>
+                    <h3 className="text-lg font-bold text-primary-800 mt-2 max-w-lg mx-auto leading-tight" style={{ fontWeight: '800' }}>
                       {selectedCert.courseName}
                     </h3>
                   </div>
@@ -358,7 +358,7 @@ export function CertificatesPage() {
               backgroundColor: '#ffffff',
               color: '#0f172a',
               padding: '48px',
-              border: '16px double #b45309',
+              border: '16px double #1e3a8a',
               position: 'relative',
               display: 'flex',
               flexDirection: 'column',
@@ -367,20 +367,20 @@ export function CertificatesPage() {
               fontFamily: "'Georgia', 'Times New Roman', serif",
             }}
           >
-            <div style={{ position: 'absolute', top: '16px', left: '16px', right: '16px', bottom: '16px', border: '1px solid rgba(180,83,9,0.3)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: '16px', left: '16px', right: '16px', bottom: '16px', border: '1px solid rgba(30,58,138,0.1)', pointerEvents: 'none' }} />
 
             {/* Header */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #f59e0b, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', border: '1px solid #d97706' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #1e3a8a, #0f766e)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', border: '1px solid #1e3a8a' }}>
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="8" r="6"/>
                   <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
                 </svg>
               </div>
-              <h2 style={{ fontSize: '28px', fontWeight: 'bold', letterSpacing: '4px', color: '#92400e', textTransform: 'uppercase', margin: '0 0 8px' }}>
+              <h2 style={{ fontSize: '28px', fontWeight: 'bold', letterSpacing: '4px', color: '#1e3a8a', textTransform: 'uppercase', margin: '0 0 8px' }}>
                 Certificate of Completion
               </h2>
-              <div style={{ width: '160px', height: '2px', backgroundColor: 'rgba(245,158,11,0.5)', margin: '12px auto' }} />
+              <div style={{ width: '160px', height: '2px', backgroundColor: 'rgba(15,118,110,0.2)', margin: '12px auto' }} />
               <p style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '2px', color: '#64748b', fontWeight: 900, fontFamily: 'Inter, system-ui, sans-serif', margin: 0 }}>
                 This credential certifies that
               </p>
@@ -394,7 +394,7 @@ export function CertificatesPage() {
               <p style={{ fontSize: '12px', color: '#64748b', marginTop: '12px', maxWidth: '400px', margin: '12px auto 0', lineHeight: '1.6', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 500 }}>
                 has successfully completed the corporate competency training requirements for:
               </p>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#92400e', marginTop: '8px', maxWidth: '500px', margin: '8px auto 0', lineHeight: '1.4', fontFamily: 'Inter, system-ui, sans-serif' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1e3a8a', marginTop: '8px', maxWidth: '500px', margin: '8px auto 0', lineHeight: '1.4', fontFamily: 'Inter, system-ui, sans-serif' }}>
                 {downloadCert.courseName}
               </h3>
             </div>

@@ -55,7 +55,7 @@ export default function PublishedCourses() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 pb-10">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-8 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className={cn("text-3xl font-extrabold tracking-tight", isDark ? "text-white" : "text-surface-900")}>

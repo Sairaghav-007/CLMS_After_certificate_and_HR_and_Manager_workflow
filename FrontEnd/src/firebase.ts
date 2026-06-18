@@ -1,4 +1,4 @@
-﻿import { initializeApp, getApps } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getMessaging, getToken, onMessage, type MessagePayload } from 'firebase/messaging';
 
 const firebaseConfig = {
@@ -132,7 +132,7 @@ export async function initWebPush(): Promise<string | null> {
       // Log token so it can be copied for Firebase Console test sends
       console.info(
         '%c[FCM] Registration token (use in Firebase Console to send test push):',
-        'color: #4f46e5; font-weight: bold;'
+        'color: #1e3a8a; font-weight: bold;'
       );
       console.info(token);
     }

@@ -98,19 +98,19 @@ export default function DashboardPage() {
 
   const kpiCards = [
     { title: 'Total Team Members', value: stats.totalTeamMembers, icon: Users, gradient: 'gradient-primary', change: { value: 4, label: 'vs last month' } },
-    { title: 'Assigned Courses', value: stats.assignedCourses, icon: BookOpen, gradient: 'bg-gradient-to-br from-violet-500 to-primary-600', change: { value: 12, label: 'new this month' } },
+    { title: 'Assigned Courses', value: stats.assignedCourses, icon: BookOpen, gradient: 'bg-gradient-to-br from-primary-700 to-primary-500', change: { value: 12, label: 'new this month' } },
     { title: 'Completed Courses', value: stats.completedCourses, icon: CheckCircle2, gradient: 'gradient-accent', change: { value: 8, label: 'this week' } },
-    { title: 'In Progress', value: stats.inProgressCourses, icon: Clock, gradient: 'bg-gradient-to-br from-blue-500 to-indigo-600', change: { value: -3, label: 'fewer pending' } },
+    { title: 'In Progress', value: stats.inProgressCourses, icon: Clock, gradient: 'bg-gradient-to-br from-primary-500 to-accent-600', change: { value: -3, label: 'fewer pending' } },
     { title: 'Overdue Employees', value: stats.overdueEmployees, icon: AlertTriangle, gradient: 'gradient-danger', change: { value: -2, label: 'improvement' } },
     { title: 'Team Completion Rate', value: `${stats.teamCompletionRate}%`, icon: TrendingUp, gradient: 'gradient-accent', change: { value: 5.2, label: 'vs last quarter' } },
     { title: 'Average Quiz Score', value: `${stats.averageQuizScore}%`, icon: BarChart3, gradient: 'gradient-warning', change: { value: 2.1, label: 'vs last month' } },
-    { title: 'Certificates Earned', value: stats.certificatesEarned, icon: Award, gradient: 'bg-gradient-to-br from-amber-500 to-orange-600', change: { value: 15, label: 'this month' } },
+    { title: 'Certificates Earned', value: stats.certificatesEarned, icon: Award, gradient: 'bg-gradient-to-br from-warning-500 to-warning-600', change: { value: 15, label: 'this month' } },
   ];
 
   const pieData = [
-    { name: 'Compliant', value: activity.filter(e => e.status === 'Compliant').length, color: '#22c55e' },
-    { name: 'At Risk', value: activity.filter(e => e.status === 'At Risk').length, color: '#f59e0b' },
-    { name: 'Non-Compliant', value: activity.filter(e => e.status === 'Non-Compliant').length, color: '#ef4444' },
+    { name: 'Compliant', value: activity.filter(e => e.status === 'Compliant').length, color: '#16A34A' },
+    { name: 'At Risk', value: activity.filter(e => e.status === 'At Risk').length, color: '#D97706' },
+    { name: 'Non-Compliant', value: activity.filter(e => e.status === 'Non-Compliant').length, color: '#DC2626' },
   ];
 
   // Derive department performance dynamically
@@ -131,7 +131,7 @@ export default function DashboardPage() {
   })();
 
   return (
-    <div>
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left">
       <PageHeader
         title="Manager Dashboard"
         subtitle="Learning Operations Control Center — Real-time team insights"
@@ -158,12 +158,12 @@ export default function DashboardPage() {
             <AreaChart data={trend}>
               <defs>
                 <linearGradient id="completedGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#1E3A8A" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#1E3A8A" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="progressGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.1} />
-                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#0F766E" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#0F766E" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:opacity-10" vertical={false} />
@@ -180,8 +180,8 @@ export default function DashboardPage() {
                 }}
               />
               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '20px', color: '#94a3b8' }} iconType="circle" />
-              <Area type="monotone" dataKey="completed" stroke="#6366f1" fill="url(#completedGrad)" strokeWidth={3} dot={{ r: 4, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-              <Area type="monotone" dataKey="inProgress" stroke="#22c55e" fill="url(#progressGrad)" strokeWidth={3} dot={{ r: 4, fill: '#22c55e', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+              <Area type="monotone" dataKey="completed" stroke="#1E3A8A" fill="url(#completedGrad)" strokeWidth={3} dot={{ r: 4, fill: '#1E3A8A', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+              <Area type="monotone" dataKey="inProgress" stroke="#0F766E" fill="url(#progressGrad)" strokeWidth={3} dot={{ r: 4, fill: '#0F766E', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
             </AreaChart>
           </ResponsiveContainer>
         </motion.div>
@@ -269,7 +269,7 @@ export default function DashboardPage() {
                 color: '#0f172a',
               }}
             />
-            <Bar dataKey="completed" fill="#6366f1" radius={[8, 8, 0, 0]} name="Completed" barSize={32} />
+            <Bar dataKey="completed" fill="#1E3A8A" radius={[8, 8, 0, 0]} name="Completed" barSize={32} />
             <Bar dataKey="assigned" fill="#e2e8f0" radius={[8, 8, 0, 0]} name="Assigned" barSize={32} />
           </BarChart>
         </ResponsiveContainer>

@@ -89,11 +89,11 @@ export default function TrendProgressPage() {
     { title: 'Total Completions', value: String(kpiStats.totalCompleted), icon: CheckCircle2, gradient: 'gradient-primary', change: { value: 0, label: 'last 6 months' } },
     { title: 'Avg/Month', value: String(kpiStats.avgCompleted), icon: BarChart3, gradient: 'gradient-accent', change: { value: 0, label: 'completions per month' } },
     { title: 'In Progress', value: String(kpiStats.totalInProgress), icon: Clock, gradient: 'gradient-warning', change: { value: 0, label: 'active learners' } },
-    { title: 'Completion Rate', value: `${kpiStats.latestCompliance}%`, icon: TrendingUp, gradient: 'bg-gradient-to-br from-indigo-500 to-blue-600', change: { value: 0, label: 'of activity' } },
+    { title: 'Completion Rate', value: `${kpiStats.latestCompliance}%`, icon: TrendingUp, gradient: 'bg-gradient-to-br from-primary-700 to-accent-600', change: { value: 0, label: 'of activity' } },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-6">
       <PageHeader
         title="Trend Progress"
         subtitle="Analyze long-term learning patterns and organizational growth over time"
@@ -177,8 +177,8 @@ export default function TrendProgressPage() {
                       <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                       <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-                      <Bar yAxisId="left" dataKey="completed" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={24} name="Completed" />
-                      <Line yAxisId="right" type="monotone" dataKey="inProgress" stroke="#22c55e" strokeWidth={3} dot={{ r: 4, fill: '#22c55e', strokeWidth: 2, stroke: '#fff' }} name="In Progress" />
+                      <Bar yAxisId="left" dataKey="completed" fill="#1e3a8a" radius={[4, 4, 0, 0]} barSize={24} name="Completed" />
+                      <Line yAxisId="right" type="monotone" dataKey="inProgress" stroke="#16a34a" strokeWidth={3} dot={{ r: 4, fill: '#16a34a', strokeWidth: 2, stroke: '#fff' }} name="In Progress" />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </motion.div>
@@ -260,8 +260,8 @@ export default function TrendProgressPage() {
                 <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-                <Bar yAxisId="left" dataKey="completed" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={32} name="Completed" />
-                <Line yAxisId="right" type="monotone" dataKey="inProgress" stroke="#22c55e" strokeWidth={3} dot={{ r: 5, fill: '#22c55e', strokeWidth: 2, stroke: '#fff' }} name="In Progress" />
+                <Bar yAxisId="left" dataKey="completed" fill="#1e3a8a" radius={[4, 4, 0, 0]} barSize={32} name="Completed" />
+                <Line yAxisId="right" type="monotone" dataKey="inProgress" stroke="#16a34a" strokeWidth={3} dot={{ r: 5, fill: '#16a34a', strokeWidth: 2, stroke: '#fff' }} name="In Progress" />
               </ComposedChart>
             </ResponsiveContainer>
           </motion.div>

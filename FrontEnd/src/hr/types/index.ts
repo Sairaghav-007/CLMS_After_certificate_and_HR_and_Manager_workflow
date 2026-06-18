@@ -34,7 +34,7 @@ export interface KPICard {
     label: string;
   };
   icon: string;
-  color: 'indigo' | 'amber' | 'blue' | 'emerald' | 'orange' | 'violet';
+  color: 'primary' | 'accent' | 'warning' | 'info' | 'danger' | 'secondary' | 'indigo' | 'amber' | 'blue' | 'emerald' | 'orange' | 'violet';
   highlight?: boolean;
 }
 

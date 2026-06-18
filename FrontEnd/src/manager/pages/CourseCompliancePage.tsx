@@ -96,7 +96,7 @@ export default function CourseCompliancePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-6">
       <PageHeader
         title="Course Compliance"
         subtitle="Manage mandatory training requirements and compliance status across the organization"

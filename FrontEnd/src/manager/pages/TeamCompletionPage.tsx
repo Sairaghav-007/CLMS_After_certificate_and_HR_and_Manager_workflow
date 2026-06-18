@@ -38,7 +38,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         minWidth: 160,
       }}>
         <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{label}</p>
-        <p style={{ fontSize: 12, color: '#6366f1', fontWeight: 600 }}>
+        <p style={{ fontSize: 12, color: '#1e3a8a', fontWeight: 600 }}>
           Avg Completion: <span style={{ fontSize: 15 }}>{val}%</span>
         </p>
         <div style={{
@@ -48,7 +48,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           background: '#e2e8f0',
           overflow: 'hidden',
         }}>
-          <div style={{ width: `${val}%`, height: '100%', background: 'linear-gradient(90deg,#6366f1,#a78bfa)', borderRadius: 99 }} />
+          <div style={{ width: `${val}%`, height: '100%', background: 'linear-gradient(90deg,#1e3a8a,#0f766e)', borderRadius: 99 }} />
         </div>
       </div>
     );
@@ -58,9 +58,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 // Pick bar colour based on completion level
 const barColor = (value: number) => {
-  if (value >= 75) return '#22c55e';   // green
-  if (value >= 40) return '#6366f1';   // indigo
-  return '#f59e0b';                    // amber
+  if (value >= 75) return '#16a34a';   // green
+  if (value >= 40) return '#1e3a8a';   // navy
+  return '#d97706';                    // warning
 };
 
 export default function TeamCompletionPage() {
@@ -136,7 +136,7 @@ export default function TeamCompletionPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-6">
       <PageHeader
         title="Team Completion"
         subtitle="Comprehensive analytics on team learning milestones and performance"
@@ -160,7 +160,7 @@ export default function TeamCompletionPage() {
               onClick={() => setTimeframe(t)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 timeframe === t
-                  ? 'bg-primary-500 text-white shadow-sm'
+                  ? 'bg-primary-700 text-white shadow-sm'
                   : 'bg-surface-100 dark:bg-surface-800 text-surface-500 hover:bg-surface-200 dark:hover:bg-surface-700'
               }`}
             >
@@ -189,13 +189,13 @@ export default function TeamCompletionPage() {
           {/* Legend */}
           <div className="hidden sm:flex items-center gap-4 text-[10px] font-semibold text-surface-500">
             <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#22c55e' }} /> ≥ 75 %
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#16a34a' }} /> ≥ 75 %
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#6366f1' }} /> 40–74 %
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#1e3a8a' }} /> 40–74 %
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#f59e0b' }} /> &lt; 40 %
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#d97706' }} /> &lt; 40 %
             </span>
           </div>
         </div>
@@ -284,7 +284,7 @@ export default function TeamCompletionPage() {
                     <td className="px-5 py-3 text-xs text-surface-500 font-semibold">{team.teamId}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2 text-left">
-                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-700 to-accent-600 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
                           {team.name?.charAt(0) ?? 'T'}
                         </div>
                         <span className="font-semibold text-surface-900 dark:text-white text-xs">{team.name}</span>

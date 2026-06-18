@@ -32,7 +32,7 @@ export default function Dashboard() {
           displayValue: String(d.totalCourses ?? 0),
           trend: { value: 0, direction: 'up', label: 'total in DB' },
           icon: 'BookOpen',
-          color: 'indigo',
+          color: 'primary',
         },
         {
           id: 'kpi-2',
@@ -42,7 +42,7 @@ export default function Dashboard() {
           displayValue: String(d.drafts ?? 0),
           subtitle: 'Drafts',
           icon: 'FileEdit',
-          color: 'amber',
+          color: 'warning',
         },
         {
           id: 'kpi-3',
@@ -52,7 +52,7 @@ export default function Dashboard() {
           displayValue: String(d.pendingReview ?? 0),
           subtitle: 'Courses',
           icon: 'ClipboardCheck',
-          color: 'blue',
+          color: 'info',
           highlight: (d.pendingReview ?? 0) > 0,
         },
         {
@@ -63,7 +63,7 @@ export default function Dashboard() {
           displayValue: String(d.published ?? 0),
           subtitle: 'Published',
           icon: 'BadgeCheck',
-          color: 'emerald',
+          color: 'accent',
         },
         {
           id: 'kpi-5',
@@ -73,7 +73,7 @@ export default function Dashboard() {
           displayValue: String(d.approved ?? 0),
           subtitle: 'Approved',
           icon: 'AlertTriangle',
-          color: 'orange',
+          color: 'danger',
           highlight: (d.approved ?? 0) > 0,
         },
         {
@@ -84,7 +84,7 @@ export default function Dashboard() {
           displayValue: String(d.needChanges ?? 0),
           subtitle: 'Returned',
           icon: 'CalendarClock',
-          color: 'violet',
+          color: 'secondary',
         },
       ]);
 
@@ -141,7 +141,7 @@ export default function Dashboard() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="space-y-8"
+      className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-8"
     >
       {/* Header Section */}
       <div className="flex flex-col gap-1">
@@ -161,7 +161,7 @@ export default function Dashboard() {
 
       {/* Stats Grid — live from PostgreSQL */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-32 rounded-[20px] bg-surface-100 animate-pulse" />
           ))}
@@ -171,7 +171,7 @@ export default function Dashboard() {
       )}
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-1 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
         <RecentActivities activities={recentActivities} />
         {/*<PendingActions actions={pendingActions} />*/}
       </div>

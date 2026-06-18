@@ -59,7 +59,7 @@ export default function CourseEditor() {
   if (loading) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-6">
       {/* Context Banner */}
       <AnimatePresence>
         {currentCourse.status === 'REJECTED' && (
@@ -146,7 +146,7 @@ export default function CourseEditor() {
       </AnimatePresence>
 
       <div className="relative pt-4">
-        <CourseCreation />
+        <CourseCreation noPadding />
       </div>
     </div>
   );

@@ -170,14 +170,14 @@ export default function GroupsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-700"></div>
         <span className="ml-3 font-semibold text-surface-500">Loading Cohorts...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-6">
       <PageHeader
         title="Learning Groups"
         subtitle="Organize team members into cohorts for specialized training tracks and collective analytics"
@@ -206,7 +206,7 @@ export default function GroupsPage() {
               onClick={() => setSelectedGroup(group)}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center text-white shadow-lg">
+                <div className="w-12 h-12 rounded-xl bg-primary-700 flex items-center justify-center text-white shadow-lg">
                   <Users className="w-6 h-6" />
                 </div>
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
@@ -273,11 +273,11 @@ export default function GroupsPage() {
             ].map(step => (
               <div key={step.id} className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                  wizardStep >= step.id ? 'bg-primary-600 text-white' : 'bg-surface-100 text-surface-400'
+                  wizardStep >= step.id ? 'bg-primary-700 text-white' : 'bg-surface-100 text-surface-400'
                 }`}>
                   <step.icon className="w-4 h-4" />
                 </div>
-                <div className={`${wizardStep >= step.id ? 'text-primary-600' : 'text-surface-400'} font-bold text-xs`}>
+                <div className={`${wizardStep >= step.id ? 'text-primary-700' : 'text-surface-400'} font-bold text-xs`}>
                   {step.label}
                 </div>
               </div>
@@ -425,8 +425,8 @@ export default function GroupsPage() {
                       ) : (
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                             <Pie data={groupComplianceData} innerRadius={50} outerRadius={70} dataKey="v">
-                                <Cell fill="#22c55e" /><Cell fill="#6366f1" /><Cell fill="#ef4444" />
+                             <Pie data={groupComplianceData} innerRadius={50} outerRadius={70} dataKey="v" animationDuration={800}>
+                                <Cell fill="#16a34a" /><Cell fill="#1e3a8a" /><Cell fill="#dc2626" />
                              </Pie>
                              <Tooltip />
                           </PieChart>

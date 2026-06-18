@@ -33,16 +33,16 @@ export default function Sidebar() {
         x: 0,
       }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed left-0 top-0 bottom-0 z-40 flex flex-col glass border border-surface-200/60 dark:border-surface-700/40 m-4 rounded-[20px] shadow-2xl shadow-surface-900/5 dark:shadow-black/20 dark:bg-sidebar-dark/90"
+      className="fixed left-0 top-0 bottom-0 z-40 flex flex-col bg-white border-r border-surface-200 m-4 rounded-[20px] shadow-sm"
     >
       {/* Logo */}
-      <div className="flex items-center h-20 px-6 border-b border-surface-200/60 dark:border-surface-700/40">
+      <div className="flex items-center h-20 px-6 border-b border-surface-200">
         <motion.div
           className="flex items-center gap-3 overflow-hidden"
           animate={{ opacity: 1 }}
         >
-          <div className="w-10 h-10 rounded-xl bg-surface-100 border border-surface-200 flex items-center justify-center flex-shrink-0 shadow-sm">
-            <Sparkles className="w-6 h-6 text-black" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-700 to-accent-600 border border-primary-700/20 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <Sparkles className="w-6 h-6 text-white" />
           </div>
           <AnimatePresence>
             {!collapsed && (
@@ -53,10 +53,10 @@ export default function Sidebar() {
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden whitespace-nowrap"
               >
-                <h1 className="text-base font-bold text-surface-900 dark:text-black tracking-tight">
+                <h1 className="text-base font-bold text-surface-900 tracking-tight">
                   Manager Hub
                 </h1>
-                <p className="text-[10px] text-surface-500 dark:text-black font-bold uppercase tracking-wider -mt-0.5">
+                <p className="text-[10px] text-surface-500 font-bold uppercase tracking-wider -mt-0.5">
                   LMS Operations
                 </p>
               </motion.div>
@@ -78,8 +78,8 @@ export default function Sidebar() {
                 whileTap={{ scale: 0.98 }}
                 className={`relative flex items-center gap-3 px-5 py-3 rounded-full transition-all duration-200 group cursor-pointer ${
                   isActive
-                    ? 'bg-white text-black border border-primary-500 shadow-sm font-bold'
-                    : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-black'
+                    ? 'bg-primary-50 text-primary-700 border border-primary-700 shadow-sm font-bold'
+                    : 'text-surface-500 hover:text-surface-900'
                 }`}
               >
                 {isActive && (
@@ -90,7 +90,7 @@ export default function Sidebar() {
                   />
                 )}
                 <Icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${
-                  isActive ? 'text-black' : 'group-hover:text-primary-500'
+                  isActive ? 'text-primary-700' : 'group-hover:text-primary-600'
                 }`} />
                 <AnimatePresence>
                   {!collapsed && (
@@ -112,12 +112,12 @@ export default function Sidebar() {
       </nav>
 
       {/* Collapse Toggle */}
-      <div className="p-4 border-t border-surface-200/60 dark:border-surface-700/40">
+      <div className="p-4 border-t border-surface-200">
         <motion.button
           whileHover={{ scale: 1.05, backgroundColor: 'rgba(0,0,0,0.02)' }}
           whileTap={{ scale: 0.95 }}
           onClick={toggle}
-          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-[14px] text-surface-500 hover:text-surface-900 dark:hover:text-white transition-all duration-200"
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-[14px] text-surface-500 hover:text-surface-900 transition-all duration-200"
         >
           {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
           <AnimatePresence>

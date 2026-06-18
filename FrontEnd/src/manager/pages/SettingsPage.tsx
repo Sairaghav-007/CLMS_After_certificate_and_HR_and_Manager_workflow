@@ -33,7 +33,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-6">
       <PageHeader
         title="Settings"
         subtitle="Manage your account preferences, notification rules, and reporting frequencies"

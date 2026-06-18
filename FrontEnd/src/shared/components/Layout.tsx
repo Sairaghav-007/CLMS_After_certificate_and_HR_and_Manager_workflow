@@ -207,19 +207,19 @@ export function AppLayout() {
 
       {/* Sidebar for Desktop */}
       <aside className={cn(
-        "hidden lg:flex flex-col w-64 bg-surface-900 text-white flex-shrink-0 transition-all duration-300 relative z-20",
+        "hidden lg:flex flex-col w-64 bg-white border-r border-surface-200 flex-shrink-0 transition-all duration-300 relative z-20",
         !sidebarOpen && "w-20"
       )}>
         {/* Brand Header */}
-        <div className="h-16 flex items-center px-6 border-b border-surface-800 gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center shadow-lg shadow-primary-500/20 flex-shrink-0">
+        <div className="h-16 flex items-center px-6 border-b border-surface-200 gap-3">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-700 to-accent-600 flex items-center justify-center shadow-lg shadow-primary-700/15 flex-shrink-0">
             <Sparkles size={16} className="text-white" />
           </div>
           {sidebarOpen && (
             <motion.span 
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              className="font-bold text-sm tracking-wide uppercase bg-gradient-to-r from-white via-white to-surface-400 bg-clip-text text-transparent"
+              className="font-bold text-sm tracking-wide uppercase text-surface-800"
             >
               Enterprise LMS
             </motion.span>
@@ -238,11 +238,11 @@ export function AppLayout() {
                 className={cn(
                   "flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all group relative",
                   isActive
-                    ? "bg-primary-600 text-white shadow-md shadow-primary-600/10"
-                    : "text-surface-400 hover:text-white hover:bg-white/[0.04]"
+                    ? "bg-primary-50 text-primary-700 border-l-4 border-primary-700 shadow-sm"
+                    : "text-surface-600 hover:text-surface-900 hover:bg-surface-50"
                 )}
               >
-                <Icon size={18} className={cn("flex-shrink-0 transition-colors", isActive ? "text-white" : "text-surface-400 group-hover:text-white")} />
+                <Icon size={18} className={cn("flex-shrink-0 transition-colors", isActive ? "text-primary-700" : "text-surface-400 group-hover:text-surface-700")} />
                 {sidebarOpen && (
                   <motion.span 
                     initial={{ opacity: 0 }}
@@ -254,7 +254,7 @@ export function AppLayout() {
                 )}
                 {/* Active side indicator */}
                 {isActive && !sidebarOpen && (
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary-400 rounded-l-full" />
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary-700 rounded-l-full" />
                 )}
               </Link>
             );
@@ -262,11 +262,11 @@ export function AppLayout() {
         </nav>
 
         {/* Sidebar Footer with session */}
-        <div className="p-4 border-t border-surface-800">
+        <div className="p-4 border-t border-surface-200">
           <button
             onClick={handleLogout}
             className={cn(
-              "w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold text-danger-400 hover:text-danger-300 hover:bg-danger-950/20 transition-all cursor-pointer",
+              "w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold text-danger-500 hover:text-danger-600 hover:bg-danger-50 transition-all cursor-pointer",
               !sidebarOpen && "justify-center px-0"
             )}
           >
@@ -294,18 +294,18 @@ export function AppLayout() {
               animate={{ x: 0 }}
               exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="relative w-72 bg-surface-900 text-white flex flex-col h-full z-50 p-5"
+              className="relative w-72 bg-white flex flex-col h-full z-50 p-5"
             >
-              <div className="flex items-center justify-between pb-6 border-b border-surface-800">
+              <div className="flex items-center justify-between pb-6 border-b border-surface-200">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center">
-                    <Sparkles size={16} />
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-700 to-accent-600 flex items-center justify-center">
+                    <Sparkles size={16} className="text-white" />
                   </div>
-                  <span className="font-bold text-sm tracking-wide uppercase">Enterprise LMS</span>
+                  <span className="font-bold text-sm tracking-wide uppercase text-surface-800">Enterprise LMS</span>
                 </div>
                 <button
                   onClick={() => setSidebarOpen(false)}
-                  className="p-1 rounded-lg hover:bg-white/5 text-surface-400 hover:text-white"
+                  className="p-1 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-surface-700"
                 >
                   <X size={18} />
                 </button>
@@ -323,8 +323,8 @@ export function AppLayout() {
                       className={cn(
                         "flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all",
                         isActive
-                          ? "bg-primary-600 text-white"
-                          : "text-surface-400 hover:text-white hover:bg-white/[0.04]"
+                          ? "bg-primary-50 text-primary-700 border-l-4 border-primary-700"
+                          : "text-surface-600 hover:text-surface-900 hover:bg-surface-50"
                       )}
                     >
                       <Icon size={18} />
@@ -334,10 +334,10 @@ export function AppLayout() {
                 })}
               </nav>
 
-              <div className="pt-6 border-t border-surface-800">
+              <div className="pt-6 border-t border-surface-200">
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold text-danger-400 hover:text-danger-300 hover:bg-danger-950/20 transition-all cursor-pointer"
+                  className="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold text-danger-500 hover:text-danger-600 hover:bg-danger-50 transition-all cursor-pointer"
                 >
                   <LogOut size={18} />
                   <span>Sign Out</span>

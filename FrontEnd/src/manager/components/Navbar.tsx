@@ -63,13 +63,13 @@ export default function Navbar() {
         <nav className="flex items-center gap-2 text-sm">
           <Link
             to="/manager/dashboard"
-            className="flex items-center gap-2 text-surface-500 dark:text-black hover:text-primary-500 transition-colors"
+            className="flex items-center gap-2 text-surface-500 hover:text-primary-600 transition-colors"
           >
             <Home className="w-4 h-4" />
-            <span className="font-bold uppercase tracking-wider text-[10px] text-surface-500 dark:text-black">Portal</span>
+            <span className="font-bold uppercase tracking-wider text-[10px] text-surface-500">Portal</span>
           </Link>
           <ChevronRight className="w-4 h-4 text-surface-400" />
-          <span className="font-bold text-surface-900 dark:text-black text-base tracking-tight">{currentLabel}</span>
+          <span className="font-bold text-surface-900 text-base tracking-tight">{currentLabel}</span>
         </nav>
 
         {/* Right Controls */}
@@ -90,7 +90,7 @@ export default function Navbar() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Global Search..."
-                  className="w-full h-11 pl-11 pr-8 rounded-[14px] bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm text-surface-900 dark:text-black placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all font-medium"
+                  className="w-full h-11 pl-11 pr-8 rounded-[14px] bg-surface-100 border border-surface-200 text-sm text-surface-900 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all font-medium"
                 />
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                 <button
@@ -107,7 +107,7 @@ export default function Navbar() {
               whileHover={{ scale: 1.05, backgroundColor: 'rgba(0,0,0,0.02)' }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setSearchOpen(true)}
-              className="w-10 h-10 rounded-[14px] flex items-center justify-center text-surface-500 hover:text-surface-900 dark:hover:text-white transition-all"
+              className="w-10 h-10 rounded-[14px] flex items-center justify-center text-surface-500 hover:text-surface-900 transition-all"
             >
               <Search className="w-[20px] h-[20px]" />
             </motion.button>
@@ -118,7 +118,7 @@ export default function Navbar() {
             whileHover={{ scale: 1.05, backgroundColor: 'rgba(0,0,0,0.02)' }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-            className="w-10 h-10 rounded-[14px] flex items-center justify-center text-surface-500 hover:text-surface-900 dark:hover:text-white transition-all"
+            className="w-10 h-10 rounded-[14px] flex items-center justify-center text-surface-500 hover:text-surface-900 transition-all"
           >
             <AnimatePresence mode="wait">
               {resolvedTheme === 'dark' ? (
@@ -138,14 +138,14 @@ export default function Navbar() {
             <motion.button
               whileHover={{ scale: 1.05, backgroundColor: 'rgba(0,0,0,0.02)' }}
               whileTap={{ scale: 0.95 }}
-              className="relative w-10 h-10 rounded-[14px] flex items-center justify-center text-surface-500 hover:text-surface-900 dark:hover:text-white transition-all"
+              className="relative w-10 h-10 rounded-[14px] flex items-center justify-center text-surface-500 hover:text-surface-900 transition-all"
             >
               <Bell className="w-[20px] h-[20px]" />
               {unreadCount > 0 && (
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-danger-500 text-[10px] font-bold text-white flex items-center justify-center shadow-lg border-2 border-white dark:border-surface-900"
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-danger-500 text-[10px] font-bold text-white flex items-center justify-center shadow-lg border-2 border-white"
                 >
                   {unreadCount}
                 </motion.span>
@@ -153,7 +153,7 @@ export default function Navbar() {
             </motion.button>
           </Link>
 
-          <div className="h-8 w-px bg-surface-200 dark:bg-surface-700 mx-1" />
+          <div className="h-8 w-px bg-surface-200 mx-1" />
 
           {/* Profile */}
           <div ref={profileRef} className="relative">
@@ -161,16 +161,16 @@ export default function Navbar() {
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => setProfileOpen(!profileOpen)}
-              className="flex items-center gap-3 pl-2 pr-2 py-1.5 rounded-[14px] hover:bg-surface-100 dark:hover:bg-surface-800 transition-all"
+              className="flex items-center gap-3 pl-2 pr-2 py-1.5 rounded-[14px] hover:bg-surface-100 transition-all"
             >
-              <div className="w-9 h-9 rounded-xl bg-surface-100 border border-surface-200 flex items-center justify-center text-sm font-bold text-black shadow-sm">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-700 to-accent-600 flex items-center justify-center text-sm font-bold text-white shadow-sm">
                 {mockManagerProfile.avatar}
               </div>
               <div className="text-left hidden lg:block">
-                <p className="text-sm font-bold text-surface-900 dark:text-black leading-tight">
+                <p className="text-sm font-bold text-surface-900 leading-tight">
                   {mockManagerProfile.name}
                 </p>
-                <p className="text-[10px] text-surface-500 dark:text-black font-bold uppercase tracking-wider">
+                <p className="text-[10px] text-surface-500 font-bold uppercase tracking-wider">
                   Admin
                 </p>
               </div>
@@ -200,26 +200,26 @@ export default function Navbar() {
 
                   {/* Profile Items */}
                   <div className="p-3">
-                    <div className="px-4 py-3 flex items-center gap-3 text-surface-600 dark:text-black">
+                    <div className="px-4 py-3 flex items-center gap-3 text-surface-600">
                       <Mail className="w-4 h-4 flex-shrink-0" />
                       <span className="text-xs font-medium truncate">{mockManagerProfile.email}</span>
                     </div>
-                    <div className="px-4 py-3 flex items-center gap-3 text-surface-600 dark:text-black">
+                    <div className="px-4 py-3 flex items-center gap-3 text-surface-600">
                       <Linkedin className="w-4 h-4 flex-shrink-0" />
                       <span className="text-xs font-medium truncate">{mockManagerProfile.linkedin}</span>
                     </div>
-                    <div className="h-px bg-surface-200 dark:bg-surface-700 my-2" />
+                    <div className="h-px bg-surface-200 my-2" />
                     <Link
                       to="/manager/settings"
                       onClick={() => setProfileOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 rounded-[14px] text-surface-600 dark:text-black hover:bg-surface-100 dark:hover:bg-surface-800 transition-all group"
+                      className="flex items-center gap-3 px-4 py-3 rounded-[14px] text-surface-600 hover:bg-surface-100 transition-all group"
                     >
                       <User className="w-4 h-4" />
                       <span className="text-sm font-bold">Profile Settings</span>
                       <ExternalLink className="w-3.5 h-3.5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
                     </Link>
                     <button
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-[14px] text-danger-500 hover:bg-danger-50 dark:hover:bg-danger-900/10 transition-all"
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-[14px] text-danger-500 hover:bg-danger-50 transition-all"
                     >
                       <LogOut className="w-4 h-4" />
                       <span className="text-sm font-bold">Sign Out Hub</span>

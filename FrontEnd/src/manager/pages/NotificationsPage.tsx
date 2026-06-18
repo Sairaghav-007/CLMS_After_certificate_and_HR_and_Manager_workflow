@@ -39,7 +39,7 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-6">
       <PageHeader
         title="Notifications"
         subtitle="Stay updated with team progress, compliance alerts, and new course submissions"

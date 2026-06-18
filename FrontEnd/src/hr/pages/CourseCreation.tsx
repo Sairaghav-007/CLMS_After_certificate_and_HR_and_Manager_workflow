@@ -19,7 +19,7 @@ const STEPS = [
   { title: 'Course Preview', description: 'Review & Submit' },
 ];
 
-export default function CourseCreation() {
+export default function CourseCreation({ noPadding = false }: { noPadding?: boolean }) {
   const {
     currentStep,
     setCurrentStep,
@@ -82,7 +82,10 @@ export default function CourseCreation() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-8 pb-24"
+      className={cn(
+        "space-y-8 pb-24",
+        !noPadding && "p-4 lg:p-8 max-w-[1600px] mx-auto text-left"
+      )}
     >
       <Toaster position="bottom-right" />
 
@@ -152,7 +155,7 @@ export default function CourseCreation() {
             isDark ? 'bg-surface-950/80 border-surface-800' : 'bg-white/80 border-surface-200 shadow-lg'
           )}
         >
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="max-w-[1600px] mx-auto flex justify-between items-center px-4 lg:px-8">
             <button
               onClick={prevStep}
               disabled={currentStep === 0}

@@ -169,9 +169,9 @@ export function EmployeeDashboard() {
   // Pie Chart Distribution (mapped categories)
   const distributionData = useMemo(() => {
     const map: Record<string, { count: number; color: string }> = {
-      [CourseCategory.MANDATORY]: { count: 0, color: "#ef4444" }, // Red
-      [CourseCategory.ELECTIVE]: { count: 0, color: "#3b82f6" },  // Blue
-      [CourseCategory.DEPARTMENT]: { count: 0, color: "#8b5cf6" }, // Purple
+      [CourseCategory.MANDATORY]: { count: 0, color: "#DC2626" }, // Red
+      [CourseCategory.ELECTIVE]: { count: 0, color: "#2563EB" },  // Royal Blue
+      [CourseCategory.DEPARTMENT]: { count: 0, color: "#0F766E" }, // Teal
     };
 
     courses.forEach((c) => {
@@ -271,8 +271,8 @@ export function EmployeeDashboard() {
                   <AreaChart data={progressChartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                     <defs>
                       <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#1e3a8a" stopOpacity={0.15}/>
+                        <stop offset="95%" stopColor="#1e3a8a" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -311,7 +311,7 @@ export function EmployeeDashboard() {
                     <Area
                       type="monotone"
                       dataKey="hours"
-                      stroke="#3b82f6"
+                      stroke="#1e3a8a"
                       strokeWidth={2.5}
                       fillOpacity={1}
                       fill="url(#chartGradient)"

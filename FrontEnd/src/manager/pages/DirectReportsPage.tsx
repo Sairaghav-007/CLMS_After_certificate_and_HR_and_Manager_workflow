@@ -197,7 +197,7 @@ export default function DirectReportsPage() {
   };
 
   return (
-    <div>
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left">
       <PageHeader
         title="Direct Reports"
         subtitle="Monitor and manage your team's learning progress"

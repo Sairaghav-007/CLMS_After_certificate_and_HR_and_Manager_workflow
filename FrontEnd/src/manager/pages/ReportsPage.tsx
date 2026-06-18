@@ -132,7 +132,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-6">
       <PageHeader
         title="Reports Management"
         subtitle="Generate on-demand analytics or schedule automated delivery to stakeholders"

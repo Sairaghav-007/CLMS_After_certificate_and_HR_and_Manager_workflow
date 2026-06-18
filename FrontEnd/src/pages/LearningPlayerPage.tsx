@@ -322,7 +322,7 @@ export function LearningPlayerPage() {
               {/* Resource Title header */}
               <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                     <span className="px-2 py-0.5 bg-primary-600/20 text-primary-400 border border-primary-500/20 rounded text-[9px] font-black uppercase tracking-wider">
+                     <span className="px-2 py-0.5 bg-accent-600/20 text-accent-400 border border-accent-500/20 rounded text-[9px] font-black uppercase tracking-wider">
                         {currentResource.type}
                      </span>
                      <h2 className="text-sm font-black text-white/90">{currentResource.title}</h2>
@@ -385,7 +385,7 @@ export function LearningPlayerPage() {
                              "px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-md transition-all cursor-pointer",
                              currentResource.isCompleted 
                                ? "bg-success-100 text-success-700 border border-success-200" 
-                               : "bg-primary-600 text-white hover:bg-primary-500 shadow-primary-500/10"
+                               : "bg-primary-700 text-white hover:bg-primary-800 shadow-primary-500/10"
                            )}
                          >
                             {currentResource.isCompleted ? '✓ Read Completed' : 'Mark as Read'}
@@ -417,7 +417,7 @@ export function LearningPlayerPage() {
                     className={cn(
                       "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border",
                       isDrawerOpen 
-                        ? "bg-primary-600 text-white border-primary-500" 
+                        ? "bg-primary-700 text-white border-primary-600" 
                         : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white"
                     )}
                   >
@@ -462,7 +462,7 @@ export function LearningPlayerPage() {
                                 className={cn(
                                   "w-full px-6 py-3 flex items-start gap-3 transition-all text-left",
                                   resource.id === resourceId 
-                                    ? "bg-primary-600/10 border-l-2 border-primary-500" 
+                                    ? "bg-primary-700/10 border-l-2 border-primary-600" 
                                     : "hover:bg-white/[0.02] border-l-2 border-transparent",
                                   module.isLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"
                                 )}
@@ -503,14 +503,11 @@ export function LearningPlayerPage() {
                       onClick={() => navigate(`/employee/courses/${courseId}/assessment`)}
                       className={cn(
                         "w-full px-6 py-6 flex items-center gap-4 transition-all cursor-pointer",
-                        course.progress === 100 ? "bg-amber-500/10 hover:bg-amber-500/20" : "opacity-35 cursor-not-allowed"
+                        course.progress === 100 ? "bg-accent-600/10 hover:bg-accent-600/20" : "opacity-35 cursor-not-allowed"
                       )}
                     >
-                       <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500 flex-shrink-0 border border-amber-500/30">
-                          <Zap size={18} />
-                       </div>
                        <div className="text-left flex-1 min-w-0">
-                          <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest leading-none mb-1">Final Assessment</p>
+                          <p className="text-[10px] font-black text-accent-400 uppercase tracking-widest leading-none mb-1">Final Assessment</p>
                           <p className="text-[9px] text-white/40 mt-0.5 leading-none">Unlock after completing syllabus</p>
                        </div>
                        {course.progress < 100 && <Lock size={12} className="ml-auto text-white/20" />}

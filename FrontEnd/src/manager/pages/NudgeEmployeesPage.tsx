@@ -131,7 +131,7 @@ export default function NudgeEmployeesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-6">
       <PageHeader
         title="Nudge Employees"
         subtitle="Send proactive reminders and compliance alerts to your team"

@@ -55,8 +55,8 @@ export function Sidebar() {
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         className={cn(
           'fixed lg:relative z-50 flex flex-col h-full',
-          'bg-gradient-to-b from-surface-900 via-surface-900 to-surface-950',
-          'border-r border-surface-800/50 shadow-2xl',
+          'bg-white',
+          'border-r border-surface-200 shadow-sm',
           'transition-transform duration-300',
           !sidebarOpen && 'max-lg:-translate-x-full'
         )}
@@ -64,8 +64,8 @@ export function Sidebar() {
         aria-label="Main navigation"
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 px-5 py-5 border-b border-surface-800/50 min-h-[72px]">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-secondary-500 shadow-lg shadow-primary-500/25 flex-shrink-0">
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-surface-200 min-h-[72px]">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary-700 to-accent-600 shadow-lg shadow-primary-700/15 flex-shrink-0">
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
           <AnimatePresence>
@@ -77,7 +77,7 @@ export function Sidebar() {
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden whitespace-nowrap"
               >
-                <h1 className="text-lg font-bold text-white tracking-tight">CLMS</h1>
+                <h1 className="text-lg font-bold text-surface-800 tracking-tight">CLMS</h1>
                 <p className="text-[11px] text-surface-400 tracking-wider uppercase">HR Portal</p>
               </motion.div>
             )}
@@ -86,7 +86,7 @@ export function Sidebar() {
           {/* Close button on mobile */}
           <button
             onClick={() => setSidebarOpen(false)}
-            className="ml-auto lg:hidden p-1 rounded-lg hover:bg-surface-800 text-surface-400 transition-colors"
+            className="ml-auto lg:hidden p-1 rounded-lg hover:bg-surface-100 text-surface-400 transition-colors"
             aria-label="Close sidebar"
           >
             <X className="w-5 h-5" />
@@ -106,8 +106,8 @@ export function Sidebar() {
                   'flex items-center gap-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative',
                   sidebarExpanded ? 'px-4' : 'px-0 justify-center',
                   isActive
-                    ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-lg shadow-primary-500/25'
-                    : 'text-surface-400 hover:text-white hover:bg-surface-800/60'
+                    ? 'bg-primary-50 text-primary-700 border-l-4 border-primary-700 shadow-sm'
+                    : 'text-surface-600 hover:text-surface-900 hover:bg-surface-50'
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -138,11 +138,11 @@ export function Sidebar() {
         </nav>
 
         {/* Collapse Toggle (Desktop only) */}
-        <div className="hidden lg:flex px-3 py-2 border-t border-surface-800/50">
+        <div className="hidden lg:flex px-3 py-2 border-t border-surface-200">
           <button
             onClick={toggleSidebar}
             className={cn(
-              'flex items-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium text-surface-400 hover:text-white hover:bg-surface-800/50 transition-all duration-200',
+              'flex items-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium text-surface-500 hover:text-surface-800 hover:bg-surface-50 transition-all duration-200',
               sidebarExpanded ? 'px-4' : 'px-0 justify-center'
             )}
             aria-label={sidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -159,7 +159,7 @@ export function Sidebar() {
         </div>
 
         {/* Footer */}
-        <div className="px-3 py-3 border-t border-surface-800/50">
+        <div className="px-3 py-3 border-t border-surface-200">
           <AnimatePresence>
             {sidebarExpanded ? (
               <motion.p

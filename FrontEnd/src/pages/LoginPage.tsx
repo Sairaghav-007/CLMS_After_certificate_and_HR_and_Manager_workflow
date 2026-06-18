@@ -76,8 +76,8 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-surface-50 via-white to-surface-100 flex items-center justify-center px-4 py-12 relative overflow-hidden font-sans">
       {/* Background decorations */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] aspect-square rounded-full bg-primary-100/40 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] aspect-square rounded-full bg-accent-100/30 blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] aspect-square rounded-full bg-primary-200/40 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] aspect-square rounded-full bg-accent-200/30 blur-[120px] pointer-events-none" />
 
       <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1fr_480px] relative z-10">
         {/* Left Side: Branding & Info */}
@@ -134,7 +134,7 @@ export function LoginPage() {
                     : "Register your employee profile to start learning."}
                 </p>
               </div>
-              <div className="rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 p-3.5 text-white shadow-lg shadow-primary-500/20">
+              <div className="rounded-2xl bg-gradient-to-br from-primary-700 to-accent-600 p-3.5 text-white shadow-lg shadow-primary-500/20">
                 {mode === "login" ? <ShieldCheck className="w-6 h-6" /> : <UserPlus className="w-6 h-6" />}
               </div>
             </div>
@@ -301,7 +301,7 @@ export function LoginPage() {
 
             <button
               disabled={isSubmitting}
-              className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-600 to-accent-600 py-3.5 text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-primary-500/20 transition-all hover:scale-[1.01] hover:from-primary-700 hover:to-accent-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+              className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-700 to-accent-600 py-3.5 text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-primary-500/20 transition-all hover:scale-[1.01] hover:from-primary-800 hover:to-accent-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting && <Loader2 className="animate-spin" size={16} />}
               <span>

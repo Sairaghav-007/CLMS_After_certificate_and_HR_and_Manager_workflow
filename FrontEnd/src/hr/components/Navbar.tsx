@@ -59,9 +59,9 @@ export function Navbar() {
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'change_request': return <MessageSquare className="w-4 h-4 text-red-500" />;
-      case 'approved': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-      case 'submitted': return <ClipboardList className="w-4 h-4 text-blue-500" />;
+      case 'change_request': return <MessageSquare className="w-4 h-4 text-danger-500" />;
+      case 'approved': return <CheckCircle2 className="w-4 h-4 text-success-500" />;
+      case 'submitted': return <ClipboardList className="w-4 h-4 text-primary-500" />;
       case 'published': return <Send className="w-4 h-4 text-primary-500" />;
       default: return <Bell className="w-4 h-4 text-surface-400" />;
     }
@@ -104,7 +104,7 @@ export function Navbar() {
           >
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+              <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-danger-500 text-white text-[10px] font-bold flex items-center justify-center">
                 {unreadCount}
               </span>
             )}
@@ -123,7 +123,7 @@ export function Navbar() {
               >
                 <div className="p-4 border-b dark:border-surface-800 flex items-center justify-between">
                    <h4 className="font-bold text-sm">Notifications</h4>
-                   <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full font-bold">
+                   <span className="text-[10px] bg-danger-500/10 text-danger-500 px-2 py-0.5 rounded-full font-bold">
                      {unreadCount} New
                    </span>
                 </div>
@@ -162,7 +162,7 @@ export function Navbar() {
         </div>
 
         <div className="relative" ref={profileRef}>
-          <button onClick={() => setShowProfile(!showProfile)} className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold text-sm shadow-xl shadow-primary-500/20">
+          <button onClick={() => setShowProfile(!showProfile)} className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-700 to-primary-500 flex items-center justify-center text-white font-bold text-sm shadow-xl shadow-primary-700/20">
             {initials}
           </button>
           
@@ -188,7 +188,7 @@ export function Navbar() {
                     <Settings className="w-4 h-4" /> Settings
                  </button>
                  <div className="border-t dark:border-surface-800 my-2" />
-                 <button className="w-full text-left px-3 py-2 rounded-xl text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2">
+                 <button className="w-full text-left px-3 py-2 rounded-xl text-sm text-danger-500 hover:bg-danger-50 dark:hover:bg-danger-500/10 flex items-center gap-2">
                     <LogOut className="w-4 h-4" /> Sign Out
                  </button>
               </motion.div>

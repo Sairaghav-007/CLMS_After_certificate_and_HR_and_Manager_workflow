@@ -94,7 +94,7 @@ export default function ReviewCourseDetail() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-20">
+    <div className="p-4 lg:p-8 max-w-[1600px] mx-auto text-left space-y-8 pb-20">
       {/* Top Bar */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <button
